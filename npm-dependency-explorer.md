@@ -233,9 +233,10 @@ async function ndeRenderVersionChart(cache, packageName, packageVersion)
     packageSemverCount = arrayLength(packageSemvers)
     foreach packageSemver, ixSemver in packageSemvers do
         packageVersion = semverStringify(packageSemver)
+        packageVersionURL = ndeCleanURL(objectNew('name', packageName, 'version', packageVersion))
         arrayPush(versionDependencies, objectNew( \
             'Version Index', packageSemverCount - ixSemver - 1, \
-            'Version', packageVersion, \
+            'Version', '[' + markdownEscape(packageVersion) + '](' + packageVersionURL + ')', \
             'Dependencies', npmPackageDependencyCount(cache, packageName, packageVersion) \
         ))
     endforeach
@@ -251,7 +252,10 @@ async function ndeRenderVersionChart(cache, packageName, packageVersion)
         'precision', 0 \
     ))
     dataSort(versionDependencies, arrayNew(arrayNew('Version Index', 1)))
-    dataTable(versionDependencies)
+    dataTable(versionDependencies, objectNew( \
+        'fields', arrayNew('Version Index', 'Version', 'Dependencies'), \
+        'markdown', arrayNew('Version') \
+    ))
 endfunction
 
 
