@@ -43,15 +43,15 @@ async function ndeMain()
     endif
 
     # Render the package header
-    isPackageView = !(vVersionSelect || vVersionChart)
     markdownPrint( \
         '', \
         '## [' + markdownEscape(packageName) + '](' + npmPackagePageURL(packageName) + ')', \
         '', \
-        '**Description:** ' + markdownEscape(objectGet(packageJSON, 'description')) + if(isPackageView, ' \\', '') \
+        '**Description:** ' + markdownEscape(objectGet(packageJSON, 'description')) \
     )
-    if isPackageView then
+    if !(vVersionSelect || vVersionChart) then
         markdownPrint( \
+            '', \
             '**Version:** ' + markdownEscape(packageVersion), \
             '([versions](' + ndeCleanURL(objectNew('name', packageName, 'version', packageVersion, 'versionSelect', 1)) + ') | ', \
             '[chart](' + ndeCleanURL(objectNew('name', packageName, 'version', packageVersion, 'versionChart', 1)) + '))' \
