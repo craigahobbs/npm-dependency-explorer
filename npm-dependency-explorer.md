@@ -180,7 +180,7 @@ function ndeRenderForm(cache, packageName, packageVersion)
         packageData = npmCacheGetPackage(cache, packageName)
         if packageData == null then
             markdownPrint('', '**Error:** Unknown package "' + markdownEscape(packageName) + '"')
-        else if packageVersion != null && npmPackageJSON(packageData, packageVersion) then
+        else if packageVersion != null && npmPackageJSON(packageData, packageVersion) == null then
             markdownPrint('', '**Error:** Unknown version "' + markdownEscape(packageVersion) + '" of package "' + \
                 markdownEscape(packageName) + '"')
         endif
