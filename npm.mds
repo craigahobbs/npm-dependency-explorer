@@ -59,8 +59,9 @@ function npmCacheGetPackageVersion(cache, packageName, packageRange)
     else then
         packageVersion = semverMatch(npmCacheGetPackageVersions(cache, packageName), packageRange)
         if packageVersion == null then
-            debugLog('npm: Unrecognized SemVer range "' + packageRange + '" for package "' + packageName + '"')
             packageVersion = npmPackageVersionLatest(npmCacheGetPackage(cache, packageName))
+            debugLog('npm: Unrecognized SemVer range "' + packageRange + '" for package "' + packageName + '"' + \
+                ', using "' + packageVersion + '" (latest)')
         endif
         objectSet(packageRanges, packageRange, packageVersion)
     endif
