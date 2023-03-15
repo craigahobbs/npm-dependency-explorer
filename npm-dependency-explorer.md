@@ -21,13 +21,11 @@ async function ndeMain()
 
     # Load the package version dependency data
     cache = npmCacheNew()
-    packageJSON = null
     if packageName != null then
-        packageJSON = npmLoadPackage(cache, packageName, packageVersion, dependencyKey)
-        if packageJSON != null && packageVersion == null then
-            packageVersion = objectGet(packageJSON, 'version')
-        endif
+        packageVersion = npmCacheLoadPackage(cache, packageName, packageVersion, dependencyKey)
     endif
+    packageData = npmCacheGetPackage(cache, packageName)
+    packageJSON = if(packageData != null, npmPackageJSON(packageData, packageVersion))
 
     # Render the menu
     currentURL = ndeURL(objectNew())
@@ -40,7 +38,7 @@ async function ndeMain()
 
     # If no package is loaded, render the package selection form
     if packageJSON == null then
-        ndeRenderForm(cache, packageName, packageVersion, packageJSON)
+        ndeRenderForm(cache, packageName, packageVersion)
         return
     endif
 
@@ -168,7 +166,7 @@ endfunction
 
 
 # Render the package selection form
-function ndeRenderForm(cache, packageName, packageVersion, packageJSON)
+function ndeRenderForm(cache, packageName, packageVersion)
     # Render the search form
     elementModelRender(arrayNew( \
         objectNew('html', 'p', 'elem', objectNew('html', 'b', 'elem', objectNew('text', 'Package Name:'))), \
@@ -179,9 +177,10 @@ function ndeRenderForm(cache, packageName, packageVersion, packageJSON)
 
     # Render error messages
     if packageName != null then
-        if npmCacheGetPackage(cache, packageName) == null then
+        packageData = npmCacheGetPackage(cache, packageName)
+        if packageData == null then
             markdownPrint('', '**Error:** Unknown package "' + markdownEscape(packageName) + '"')
-        else if packageJSON == null then
+        else if packageVersion != null && npmPackageJSON(packageData, packageVersion) then
             markdownPrint('', '**Error:** Unknown version "' + markdownEscape(packageVersion) + '" of package "' + \
                 markdownEscape(packageName) + '"')
         endif
@@ -226,7 +225,7 @@ async function ndeRenderVersionChart(cache, packageName, packageVersion)
     )
 
     # Load all package version dependencies
-    npmLoadPackageAllVersions(cache, packageName, 'dependencies')
+    npmCacheLoadPackageAll(cache, packageName, 'dependencies')
 
     # Compute the version dependency data table
     versionDependencies = arrayNew()
