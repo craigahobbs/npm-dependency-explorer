@@ -148,29 +148,22 @@ async function npmCacheLoadPackageJSONs(cache, packageJSONs, dependencyKey)
     foreach packageJSON in packageJSONs do
         # Get the package dependencies
         packageDependencies = objectGet(packageJSON, dependencyKey)
-        if packageDependencies == null then
-            continue
+        if packageDependencies != null then
+            # Add to the unloaded dependencies
+            foreach dependencyName in objectKeys(packageDependencies) do
+                dependencyRange = objectGet(packageDependencies, dependencyName)
+
+                # Add the unloaded dependency package
+                if !objectHas(cachePackages, dependencyName) then
+                    objectSet(unloadedNames, dependencyName)
+                endif
+
+                # Add the unloaded dependency range
+                if !objectHas(objectGet(cacheRanges, dependencyName), dependencyRange) then
+                    arrayPush(unloadedRanges, arrayNew(dependencyName, dependencyRange))
+                endif
+            endforeach
         endif
-        dependencyNames = objectKeys(packageDependencies)
-        if arrayLength(dependencyNames) == 0 then
-            continue
-        endif
-
-        # Add to the unloaded dependencies
-        foreach dependencyName in dependencyNames do
-            dependencyRange = objectGet(packageDependencies, dependencyName)
-
-            # Add the unloaded dependency package
-            if !objectHas(cachePackages, dependencyName) then
-                objectSet(unloadedNames, dependencyName)
-            endif
-
-            # Add the unloaded dependency range
-            dependencyRanges = objectGet(cacheRanges, dependencyName)
-            if !objectHas(dependencyRanges, dependencyRange) then
-                arrayPush(unloadedRanges, arrayNew(dependencyName, dependencyRange))
-            endif
-        endforeach
     endforeach
 
     # Compute the package data URLs for the unloaded dependency package names
@@ -180,28 +173,19 @@ async function npmCacheLoadPackageJSONs(cache, packageJSONs, dependencyKey)
         arrayPush(unloadedURLs, npmPackageURL(unloadedName))
     endforeach
 
-    # Fetch the unloaded depedency data URLs
+    # Fetch the unloaded depedency data URLs and add to the cache
     foreach dependencyData, ixDependencyData in fetch(unloadedURLs) do
-        dependencyName = arrayGet(unloadedNames, ixDependencyData)
-
-        # Was the package unpublished?
-        if dependencyData != null && objectHas(dependencyData, 'unpublished') then
-            dependencyData = null
-        endif
-
-        # Add the dependency package data to the cache
-        npmCacheAddPackage(cache, dependencyName, dependencyData)
+        npmCacheAddPackage(cache, arrayGet(unloadedNames, ixDependencyData), dependencyData)
     endforeach
 
-    # Get the array of unloaded package JSON
+    # Get the array of fetched package JSONs
     unloadedJSONs = arrayNew()
     foreach unloadedNameRange in unloadedRanges do
         unloadedName = arrayGet(unloadedNameRange, 0)
         unloadedRange = arrayGet(unloadedNameRange, 1)
 
         # Has the package range already been computed?
-        unloadedRanges = objectGet(cacheRanges, unloadedName)
-        if objectHas(unloadedRanges, unloadedRange) then
+        if objectHas(objectGet(cacheRanges, unloadedName), unloadedRange) then
             continue
         endif
 
@@ -225,11 +209,62 @@ async function npmCacheLoadPackageJSONs(cache, packageJSONs, dependencyKey)
 endfunction
 
 
+# Compute an npm package's dependency data table
+function npmCacheGetPackageDependencies(cache, dependencies, warnings, packageName, packageVersion, dependencyKey, completed)
+    completed = if(completed != null, completed, objectNew())
+
+    # Package and version already loaded?
+    if !objectHas(completed, packageName) then
+        objectSet(completed, packageName, objectNew())
+    endif
+    completedVersions = objectGet(completed, packageName)
+    if objectHas(completedVersions, packageVersion) then
+        return
+    endif
+    objectSet(completedVersions, packageVersion)
+
+    # Get the package dependencies object
+    packageData = npmCacheGetPackage(cache, packageName)
+    packageJSON = if(packageData != null, npmPackageJSON(packageData, packageVersion))
+    packageDependencies = if(packageJSON != null, objectGet(packageJSON, dependencyKey))
+    dependencyNames = if(packageDependencies != null, objectKeys(packageDependencies))
+    if dependencyNames == null then
+        return
+    endif
+
+    # Add the package dependency rows
+    foreach dependencyName in dependencyNames do
+        # Determine the dependency version
+        dependencyRange = objectGet(packageDependencies, dependencyName)
+        dependencyVersion = npmCacheGetPackageVersion(cache, dependencyName, dependencyRange)
+        if dependencyVersion == null then
+            arrayPush(warnings, 'Unknown version "' + dependencyRange + '" of package "' + dependencyName + '"')
+            continue
+        endif
+
+        # Add the dependency row
+        dependencyData = npmCacheGetPackage(cache, dependencyName)
+        dependencyLatest = if(dependencyData != null, npmPackageVersionLatest(dependencyData))
+        arrayPush(dependencies, objectNew( \
+            'Package', dependencyName, \
+            'Version', dependencyVersion, \
+            'Latest', if(dependencyVersion == dependencyLatest, '', dependencyLatest), \
+            'Range', dependencyRange, \
+            'Dependent', packageName, \
+            'Dependent Version', packageVersion \
+        ))
+
+        # Add the dependency's dependencies
+        npmCacheGetPackageDependencies(cache, dependencies, warnings, dependencyName, dependencyVersion, 'dependencies', completed)
+    endforeach
+endfunction
+
+
 # Get a package's total dependency count
 function npmPackageDependencyCount(cache, packageName, packageVersion)
     dependencies = arrayNew()
     warnings = arrayNew()
-    npmPackageDependencies(cache, dependencies, warnings, packageName, packageVersion, 'dependencies')
+    npmCacheGetPackageDependencies(cache, dependencies, warnings, packageName, packageVersion, 'dependencies')
     dependenciesTotal = dataAggregate(dependencies, objectNew( \
         'categories', arrayNew('Package', 'Version'), \
         'measures', arrayNew( \
@@ -245,7 +280,7 @@ function npmPackageStats(cache, packageName, packageVersion, dependencyKey)
     # Get the package dependencies
     dependencies = arrayNew()
     warnings = arrayNew()
-    npmPackageDependencies(cache, dependencies, warnings, packageName, packageVersion, dependencyKey)
+    npmCacheGetPackageDependencies(cache, dependencies, warnings, packageName, packageVersion, dependencyKey)
 
     # Compute the dependency statistics
     dependenciesDirect = dataFilter(dependencies, 'Dependent == packageName && [Dependent Version] == packageVersion', \
@@ -289,58 +324,4 @@ function npmPackageStats(cache, packageName, packageVersion, dependencyKey)
         'dependenciesDirect', dependenciesDirect, \
         'warnings', warnings \
     )
-endfunction
-
-
-# Compute an npm package's dependency data table
-function npmPackageDependencies(cache, dependencies, warnings, packageName, packageVersion, dependencyKey, completed)
-    completed = if(completed != null, completed, objectNew())
-
-    # Package and version already loaded?
-    if !objectHas(completed, packageName) then
-        objectSet(completed, packageName, objectNew())
-    endif
-    completedVersions = objectGet(completed, packageName)
-    if objectHas(completedVersions, packageVersion) then
-        return
-    endif
-    objectSet(completedVersions, packageVersion)
-
-    # Get the package dependencies object
-    packageData = npmCacheGetPackage(cache, packageName)
-    packageJSON = npmPackageJSON(packageData, packageVersion)
-    packageDependencies = objectGet(packageJSON, dependencyKey)
-    dependencyNames = if(packageDependencies != null, objectKeys(packageDependencies))
-    if dependencyNames != null && arrayLength(dependencyNames) == 0 then
-        return
-    endif
-
-    # Add the package dependency rows
-    foreach dependencyName in dependencyNames do
-        # Determine the dependency version
-        dependencyRange = objectGet(packageDependencies, dependencyName)
-        dependencyVersion = npmCacheGetPackageVersion(cache, dependencyName, dependencyRange)
-        if dependencyVersion == null then
-            arrayPush(warnings, 'Unknown version "' + dependencyVersion + '" of package "' + dependencyName + '"')
-        endif
-
-        # Compute the latest version
-        dependencyData = npmCacheGetPackage(cache, dependencyName)
-        dependencyLatest = npmPackageVersionLatest(dependencyData)
-
-        if dependencyVersion != null then
-            # Add the dependency row
-            arrayPush(dependencies, objectNew( \
-                'Package', dependencyName, \
-                'Version', dependencyVersion, \
-                'Latest', if(dependencyVersion == dependencyLatest, '', dependencyLatest), \
-                'Range', dependencyRange, \
-                'Dependent', packageName, \
-                'Dependent Version', packageVersion \
-            ))
-
-            # Add the dependency's dependencies
-            npmPackageDependencies(cache, dependencies, warnings, dependencyName, dependencyVersion, 'dependencies', completed)
-        endif
-    endforeach
 endfunction
