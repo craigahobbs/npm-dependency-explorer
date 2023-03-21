@@ -189,12 +189,38 @@ function semverMatch(semvers, range)
             if(major >= 1, 0, if(minor >= 1, 0, patch + 1)), \
             arrayNew(0) \
         )
-        filtered = dataFilter(semvers, \
+        filtered = dataFilter( \
+            semvers, \
             'semverCompare(semver, lower) >= 0 && semverCompare(semver, upper) < 0', \
-            objectNew('lower', lower, 'upper', upper))
-        filtered = dataFilter(filtered, \
+            objectNew('lower', lower, 'upper', upper) \
+        )
+        filtered = dataFilter( \
+            filtered, \
             'release == null || (major == lowerMajor && minor == lowerMinor && patch == lowerPatch)', \
-            objectNew('lower', lower, 'upper', upper, 'lowerMajor', major, 'lowerMinor', minor, 'lowerPatch', patch))
+            objectNew('lower', lower, 'upper', upper, 'lowerMajor', major, 'lowerMinor', minor, 'lowerPatch', patch) \
+        )
+        return if(arrayLength(filtered), semverStringify(arrayGet(filtered, 0)))
+    endif
+
+    # Hypen Range
+    matchHyphen = regexMatch(semverRangeRegexHyphen, range)
+    if matchHyphen != null then
+        groups = objectGet(matchHyphen, 'groups')
+        lower = semverNew( \
+            numberParseInt(objectGet(groups, 'major')), \
+            if(objectGet(groups, 'minor'), numberParseInt(objectGet(groups, 'minor')), 0), \
+            if(objectGet(groups, 'patch'), numberParseInt(objectGet(groups, 'patch')), 0) \
+        )
+        upper = semverNew( \
+            numberParseInt(objectGet(groups, 'major2')), \
+            if(objectGet(groups, 'minor2'), numberParseInt(objectGet(groups, 'minor2')), 0), \
+            if(objectGet(groups, 'patch2'), numberParseInt(objectGet(groups, 'patch2')), 0) \
+        )
+        filtered = dataFilter( \
+            semvers, \
+            'semverCompare(semver, lower) >= 0 && semverCompare(semver, upper) < 0', \
+            objectNew('lower', lower, 'upper', upper) \
+        )
         return if(arrayLength(filtered), semverStringify(arrayGet(filtered, 0)))
     endif
 
@@ -206,9 +232,11 @@ function semverMatch(semvers, range)
         minor = numberParseInt(objectGet(groups, 'minor'))
         lower = semverNew(major, minor, 0)
         upper = semverNew(major, minor + 1, 0, arrayNew(0))
-        filtered = dataFilter(semvers, \
+        filtered = dataFilter( \
+            semvers, \
             'semverCompare(semver, lower) >= 0 && semverCompare(semver, upper) < 0', \
-            objectNew('lower', lower, 'upper', upper))
+            objectNew('lower', lower, 'upper', upper) \
+        )
         return if(arrayLength(filtered), semverStringify(arrayGet(filtered, 0)))
     endif
 
@@ -218,4 +246,8 @@ endfunction
 
 # SemVer range regular expressions
 semverRangeRegexCarrot = regexNew('^\\^' + semverRegexStrSemver + '$')
+semverRangeRegexHyphen = regexNew( \
+    '^(?<major>0|[1-9]\\d*)(?:\\.(?<minor>0|[1-9]\\d*))?(?:\\.(?<patch>0|[1-9]\\d*))?\\s*-\\s*' + \
+    '(?<major2>0|[1-9]\\d*)(?:\\.(?<minor2>0|[1-9]\\d*))?(?:\\.(?<patch2>0|[1-9]\\d*))?$' \
+)
 semverRangeRegexTilde2 = regexNew('^~(?<major>0|[1-9]\\d*)\\.(?<minor>0|[1-9]\\d*)')

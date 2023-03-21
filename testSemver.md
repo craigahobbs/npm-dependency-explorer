@@ -95,5 +95,24 @@ endfunction
 unittestRunTest('testSemverMatch_carrot')
 
 
+function testSemverMatch_hyphen()
+    versions = semverVersions(arrayNew(\
+        '1.0.1', '1.0.2', '1.0.3', \
+        '1.1.1', '1.1.2', '1.1.3', \
+        '2.0.0', '2.0.1' \
+    ))
+    unittestEquals(semverMatch(versions, '1 - 2'), '1.1.3', '1')
+    unittestEquals(semverMatch(versions, '1.0 - 2.0'), '1.1.3', '2')
+    unittestEquals(semverMatch(versions, '1.0.0 - 2.0.0'), '1.1.3', '3')
+    unittestEquals(semverMatch(versions, '1.0. - 2.0'), null)
+    unittestEquals(semverMatch(versions, '1.0 - 2.0.'), null)
+    unittestEquals(semverMatch(versions, '1. - 2'), null)
+    unittestEquals(semverMatch(versions, '1 - 2.'), null)
+    unittestEquals(semverMatch(versions, ' - 2.'), null)
+    unittestEquals(semverMatch(versions, '1 -'), null)
+endfunction
+unittestRunTest('testSemverMatch_hyphen')
+
+
 unittestReport()
 ~~~
