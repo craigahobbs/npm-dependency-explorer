@@ -103,7 +103,8 @@ function testSemverMatch_hyphen()
     ))
     unittestEquals(semverMatch(versions, '1 - 2'), '1.1.3')
     unittestEquals(semverMatch(versions, '1.0 - 2.0'), '1.1.3')
-    unittestEquals(semverMatch(versions, '1.0.0 - 2.0.0'), '1.1.3')
+    unittestEquals(semverMatch(versions, '1.0.0 - 2.0'), '1.1.3')
+    unittestEquals(semverMatch(versions, '1.0.0 - 2.0.0'), '2.0.0')
     unittestEquals(semverMatch(versions, '1.0. - 2.0'), null)
     unittestEquals(semverMatch(versions, '1.0 - 2.0.'), null)
     unittestEquals(semverMatch(versions, '1. - 2'), null)
@@ -118,8 +119,10 @@ function testSemverMatch_xRange()
     versions = semverVersions(arrayNew(\
         '1.0.1', '1.0.2', '1.0.3', \
         '1.1.1', '1.1.2', '1.1.3', \
-        '2.0.0-beta.1', '2.0.0', '2.0.1' \
+        '2.0.0-beta.1', '2.0.0', '2.0.1', \
+        '2.1.0-beta.1' \
     ))
+    unittestEquals(semverMatch(versions, ''), '2.0.1')
     unittestEquals(semverMatch(versions, '*'), '2.0.1')
     unittestEquals(semverMatch(versions, '1'), '1.1.3', '1')
     unittestEquals(semverMatch(versions, '1.x'), '1.1.3')

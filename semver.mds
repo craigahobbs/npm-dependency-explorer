@@ -175,7 +175,7 @@ endfunction
 function semverMatch(semvers, range)
     filtered = null
 
-    # Hypen Range
+    # Hypen range
     matchHyphen = regexMatch(semverRangeRegexHyphen, range)
     if matchHyphen != null then
         groups = objectGet(matchHyphen, 'groups')
@@ -189,18 +189,25 @@ function semverMatch(semvers, range)
             if(objectGet(groups, 'minor2'), numberParseInt(objectGet(groups, 'minor2')), 0), \
             if(objectGet(groups, 'patch2'), numberParseInt(objectGet(groups, 'patch2')), 0) \
         )
+        hasUpperPatch = objectGet(groups, 'patch2') != null
         filtered = dataFilter( \
             semvers, \
-            "objectGet(semver, 'release') == null && semverCompare(semver, lower) >= 0 && semverCompare(semver, upper) < 0", \
-            objectNew('lower', lower, 'upper', upper) \
+            "objectGet(semver, 'release') == null && semverCompare(semver, lower) >= 0 && " + \
+                'if(hasUpperPatch, semverCompare(semver, upper) <= 0, semverCompare(semver, upper) < 0)', \
+            objectNew('lower', lower, 'upper', upper, 'hasUpperPatch', hasUpperPatch) \
         )
         return if(arrayLength(filtered), semverStringify(arrayGet(filtered, 0)))
     endif
 
-    # X-Range
+    # X-range
     matchX0 = regexMatch(semverRangeRegexX0, range)
     if matchX0 != null then
-        return if(arrayLength(semvers), semverStringify(arrayGet(semvers, 0)))
+        filtered = dataFilter( \
+            semvers, \
+            "objectGet(semver, 'release') == null", \
+            objectNew('lower', lower, 'upper', upper) \
+        )
+        return if(arrayLength(filtered), semverStringify(arrayGet(filtered, 0)))
     endif
     matchX1 = regexMatch(semverRangeRegexX1, range)
     if matchX1 != null then
@@ -283,7 +290,7 @@ semverRangeRegexHyphen = regexNew( \
     '^(?<major>0|[1-9]\\d*)(?:\\.(?<minor>0|[1-9]\\d*))?(?:\\.(?<patch>0|[1-9]\\d*))?\\s*-\\s*' + \
     '(?<major2>0|[1-9]\\d*)(?:\\.(?<minor2>0|[1-9]\\d*))?(?:\\.(?<patch2>0|[1-9]\\d*))?$' \
 )
-semverRangeRegexX0 = regexNew('^\\*$')
-semverRangeRegexX1 = regexNew('^(?<major>0|[1-9]\\d*)(?:\\.x)?(?:\\.x)?$')
-semverRangeRegexX2 = regexNew('^(?<major>0|[1-9]\\d*)(?:\\.(?<minor>0|[1-9]\\d*))(?:\\.x)?$')
+semverRangeRegexX0 = regexNew('^[xX*]?$')
+semverRangeRegexX1 = regexNew('^(?<major>0|[1-9]\\d*)(?:\\.[xX*]){0,2}$')
+semverRangeRegexX2 = regexNew('^(?<major>0|[1-9]\\d*)(?:\\.(?<minor>0|[1-9]\\d*))(?:\\.[xX*])?$')
 semverRangeRegexTilde2 = regexNew('^~(?<major>0|[1-9]\\d*)\\.(?<minor>0|[1-9]\\d*)')
