@@ -224,6 +224,39 @@ function semverMatch(semvers, range)
         return if(arrayLength(filtered), semverStringify(arrayGet(filtered, 0)))
     endif
 
+    # X-Range
+    matchX0 = regexMatch(semverRangeRegexX0, range)
+    if matchX0 != null then
+        return if(arrayLength(semvers), semverStringify(arrayGet(semvers, 0)))
+    endif
+    matchX1 = regexMatch(semverRangeRegexX1, range)
+    if matchX1 != null then
+        groups = objectGet(matchX1, 'groups')
+        major = numberParseInt(objectGet(groups, 'major'))
+        lower = semverNew(major, 0, 0)
+        upper = semverNew(major + 1, 0, 0)
+        filtered = dataFilter( \
+            semvers, \
+            'semverCompare(semver, lower) >= 0 && semverCompare(semver, upper) < 0', \
+            objectNew('lower', lower, 'upper', upper) \
+        )
+        return if(arrayLength(filtered), semverStringify(arrayGet(filtered, 0)))
+    endif
+    matchX2 = regexMatch(semverRangeRegexX2, range)
+    if matchX2 != null then
+        groups = objectGet(matchX2, 'groups')
+        major = numberParseInt(objectGet(groups, 'major'))
+        minor = numberParseInt(objectGet(groups, 'minor'))
+        lower = semverNew(major, minor, 0)
+        upper = semverNew(major, minor + 1, 0)
+        filtered = dataFilter( \
+            semvers, \
+            'semverCompare(semver, lower) >= 0 && semverCompare(semver, upper) < 0', \
+            objectNew('lower', lower, 'upper', upper) \
+        )
+        return if(arrayLength(filtered), semverStringify(arrayGet(filtered, 0)))
+    endif
+
     # Tilde range (major-minor)
     matchTilde2 = regexMatch(semverRangeRegexTilde2, range)
     if matchTilde2 != null then
@@ -250,4 +283,7 @@ semverRangeRegexHyphen = regexNew( \
     '^(?<major>0|[1-9]\\d*)(?:\\.(?<minor>0|[1-9]\\d*))?(?:\\.(?<patch>0|[1-9]\\d*))?\\s*-\\s*' + \
     '(?<major2>0|[1-9]\\d*)(?:\\.(?<minor2>0|[1-9]\\d*))?(?:\\.(?<patch2>0|[1-9]\\d*))?$' \
 )
+semverRangeRegexX0 = regexNew('^\\*$')
+semverRangeRegexX1 = regexNew('^(?<major>0|[1-9]\\d*)(?:\\.x)?(?:\\.x)?$')
+semverRangeRegexX2 = regexNew('^(?<major>0|[1-9]\\d*)(?:\\.(?<minor>0|[1-9]\\d*))?(?:\\.x)?$')
 semverRangeRegexTilde2 = regexNew('^~(?<major>0|[1-9]\\d*)\\.(?<minor>0|[1-9]\\d*)')
