@@ -1,0 +1,86 @@
+# Licensed under the MIT License
+# https://github.com/craigahobbs/craigahobbs.github.io/blob/main/LICENSE
+
+
+# Test statistics
+unittestTests = objectNew()
+
+
+# Run a unit test
+function unittestRunTest(testName)
+    # Single test argument?
+    if vTest != null && vTest != testName then
+        return
+    endif
+
+    # Test run multiple times?
+    if objectHas(unittestTests, testName) then
+        markdownPrint('', 'Test "' + markdownEscape(testName) + '" run multiple times')
+        return
+    endif
+    testFailures = arrayNew()
+    objectSet(unittestTests, testName, testFailures)
+    setGlobal('unittestTestName', testName)
+
+    # Get the test func
+    testFn = getGlobal(testName)
+    if testFn == null then
+        markdownPrint('', 'Test "' + markdownEscape(testName) + '" not found')
+        return
+    endif
+
+    # Run the test
+    testFn()
+
+    # Unset the test name global
+    setGlobal('unittestTestName', null)
+endfunction
+
+
+# Unit test report
+function unittestReport()
+    # Report each test result
+    testFailCount = 0
+    testNames = arraySort(objectKeys(unittestTests))
+    foreach testName in testNames do
+        testFailures = objectGet(getGlobal('unittestTests'), testName)
+        markdownPrint('', 'Test "' + markdownEscape(testName) + '" - ' + if(arrayLength(testFailures), 'FAIL', 'OK'))
+        foreach error in testFailures do
+            markdownPrint('', '- ' + markdownEscape(error))
+        endforeach
+        if arrayLength(testFailures) then
+            testFailCount = testFailCount + 1
+        endif
+    endforeach
+
+    # Report statistics
+    testCount = arrayLength(testNames)
+    markdownPrint( \
+        '', \
+        '---', \
+        '', \
+        'Ran ' + testCount + ' tests, ' + (testCount - testFailCount) + ' succeeded, ' + testFailCount + ' failed' \
+    )
+endfunction
+
+
+# Reset unit test data
+function unittestReset()
+    setGlobal('unittestTests', objectNew())
+endfunction
+
+
+# Assert an actual value is equal to the expected value
+function unittestEquals(actual, expected, description)
+    if actual != expected then
+        testName = getGlobal('unittestTestName')
+        testFailures = objectGet(getGlobal('unittestTests'), testName)
+        arrayPush(testFailures, if(description != null, description + ' - ', '') + actual + ' != ' + expected)
+    endif
+endfunction
+
+
+# Assert an actual value is deeply equal to the expected value
+function unittestDeepEquals(actual, expected, description)
+    unittestEquals(jsonStringify(actual), jsonStringify(expected), description)
+endfunction
