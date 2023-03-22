@@ -59,40 +59,18 @@ endfunction
 unittestRunTest('testSemverVersions')
 
 
-function testSemverMatch_tilde()
-    versions = semverVersions(arrayNew('1.2.2', '1.2.2-rc.2+1235'))
-    unittestEquals(semverMatch(versions, '~1.2'), '1.2.2')
-    unittestEquals(semverMatch(versions, '~1.3'), null)
-endfunction
-unittestRunTest('testSemverMatch_tilde')
-
-
-function testSemverMatch_carrot()
+function testSemverMatch_range()
     versions = semverVersions(arrayNew(\
-        '0.0.1', '0.0.2', '0.0.3', \
-        '0.1.1', '0.1.2', '0.1.3', \
         '1.0.1', '1.0.2', '1.0.3', \
         '1.1.1', '1.1.2', '1.1.3', \
-        '1.2.1-beta.1', '1.2.1-beta.2', \
-        '2.0.0' \
+        '2.0.0-beta.1', '2.0.0', '2.0.1' \
     ))
-    unittestEquals(semverMatch(versions, '^0.0.1'), '0.0.1')
-    unittestEquals(semverMatch(versions, '^0.0.3'), '0.0.3')
-    unittestEquals(semverMatch(versions, '^0.0.4'), null)
-    unittestEquals(semverMatch(versions, '^0.1.1'), '0.1.3')
-    unittestEquals(semverMatch(versions, '^0.1.3'), '0.1.3')
-    unittestEquals(semverMatch(versions, '^0.1.4'), null)
-    unittestEquals(semverMatch(versions, '^1.0.1'), '1.1.3')
-    unittestEquals(semverMatch(versions, '^1.0.3'), '1.1.3')
-    unittestEquals(semverMatch(versions, '^1.0.4'), '1.1.3')
-    unittestEquals(semverMatch(versions, '^1.1.1'), '1.1.3')
-    unittestEquals(semverMatch(versions, '^1.1.3'), '1.1.3')
-    unittestEquals(semverMatch(versions, '^1.1.4'), null)
-    unittestEquals(semverMatch(versions, '^1.2.1-beta.1'), '1.2.1-beta.2')
-    unittestEquals(semverMatch(versions, '^1.2.1'), null)
-    unittestEquals(semverMatch(versions, '^2.0.0'), '2.0.0')
+    unittestEquals(semverMatch(versions, '1.0.1'), '1.0.1')
+    unittestEquals(semverMatch(versions, '1.0.4'), null)
+    unittestEquals(semverMatch(versions, '= 1.0.1'), '1.0.1')
+    unittestEquals(semverMatch(versions, '= 1.0.4'), null)
 endfunction
-unittestRunTest('testSemverMatch_carrot')
+unittestRunTest('testSemverMatch_range')
 
 
 function testSemverMatch_hyphen()
@@ -131,6 +109,42 @@ function testSemverMatch_xRange()
     unittestEquals(semverMatch(versions, '1.'), null)
 endfunction
 unittestRunTest('testSemverMatch_xRange')
+
+
+function testSemverMatch_tilde()
+    versions = semverVersions(arrayNew('1.2.2', '1.2.2-rc.2+1235'))
+    unittestEquals(semverMatch(versions, '~1.2'), '1.2.2')
+    unittestEquals(semverMatch(versions, '~1.3'), null)
+endfunction
+unittestRunTest('testSemverMatch_tilde')
+
+
+function testSemverMatch_carrot()
+    versions = semverVersions(arrayNew(\
+        '0.0.1', '0.0.2', '0.0.3', \
+        '0.1.1', '0.1.2', '0.1.3', \
+        '1.0.1', '1.0.2', '1.0.3', \
+        '1.1.1', '1.1.2', '1.1.3', \
+        '1.2.1-beta.1', '1.2.1-beta.2', \
+        '2.0.0' \
+    ))
+    unittestEquals(semverMatch(versions, '^0.0.1'), '0.0.1')
+    unittestEquals(semverMatch(versions, '^0.0.3'), '0.0.3')
+    unittestEquals(semverMatch(versions, '^0.0.4'), null)
+    unittestEquals(semverMatch(versions, '^0.1.1'), '0.1.3')
+    unittestEquals(semverMatch(versions, '^0.1.3'), '0.1.3')
+    unittestEquals(semverMatch(versions, '^0.1.4'), null)
+    unittestEquals(semverMatch(versions, '^1.0.1'), '1.1.3')
+    unittestEquals(semverMatch(versions, '^1.0.3'), '1.1.3')
+    unittestEquals(semverMatch(versions, '^1.0.4'), '1.1.3')
+    unittestEquals(semverMatch(versions, '^1.1.1'), '1.1.3')
+    unittestEquals(semverMatch(versions, '^1.1.3'), '1.1.3')
+    unittestEquals(semverMatch(versions, '^1.1.4'), null)
+    unittestEquals(semverMatch(versions, '^1.2.1-beta.1'), '1.2.1-beta.2')
+    unittestEquals(semverMatch(versions, '^1.2.1'), null)
+    unittestEquals(semverMatch(versions, '^2.0.0'), '2.0.0')
+endfunction
+unittestRunTest('testSemverMatch_carrot')
 
 
 unittestReport()
