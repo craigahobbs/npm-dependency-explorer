@@ -175,6 +175,14 @@ function ndeRenderForm(cache, packageName, packageVersion)
     ))
     setDocumentFocus('package-name-text')
 
+    # Render example packages
+    markdownPrint('', '## Examples')
+    foreach exampleName in arrayNew( \
+        'ava', 'c8', 'calc-script', 'element-model', 'eslint', 'jsdoc', 'jsdom', 'markdown-up', 'mermaid', 'schema-markdown' \
+    ) do
+        markdownPrint('', '[' + markdownEscape(exampleName) + "](#var.vName='" + encodeURIComponent(exampleName) + "')")
+    endforeach
+
     # Render error messages
     if packageName != null then
         packageData = npmCacheGetPackage(cache, packageName)
@@ -248,7 +256,7 @@ async function ndeRenderVersionChart(cache, packageName, packageVersion)
         'x', 'Version Index', \
         'y', arrayNew('Dependencies'), \
         'xTicks', objectNew('count', 5), \
-        'yTicks', objectNew('count', 5), \
+        'yTicks', objectNew('count', 5, 'start', 0), \
         'precision', 0 \
     ))
     dataSort(versionDependencies, arrayNew(arrayNew('Version Index', 1)))
