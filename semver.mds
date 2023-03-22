@@ -178,15 +178,33 @@ function semverMatch(semvers, range)
     # Range
     matchRange = regexMatch(semverRegexRange, range)
     if matchRange != null then
-        groups = objectGet(matchRange, 'groups')
-        rangeOp = objectGet(groups, 'op')
-        rangeValue = semverParse(matchRange)
-        rangeOp = if(rangeOp == '' || rangeOp == '=', '==', rangeOp)
-        filtered = dataFilter( \
-            semvers, \
-            "objectGet(semver, 'release') == null && semverCompare(semver, rangeValue) " + rangeOp + ' 0', \
-            objectNew('rangeValue', rangeValue) \
-        )
+        rangePartOp = null
+        foreach rangePart in stringSplit(range, semverRegexRangeSplit) do
+            # Range operator?
+            if regexMatch(semverRegexRangeOp, rangePart) then
+                rangePartOp = rangePart
+                continue
+            endif
+
+            # Get the range filter operator
+            if rangePartOp != null then
+                rangeOp = if(rangePartOp == '=', '==', rangePartOp)
+                rangePartOp = null
+            else then
+                rangeOp = '=='
+            endif
+
+            # Parse the range part semver
+            matchRangePart = regexMatch(semverRegexStrSemver, rangePart)
+            groups = objectGet(matchRangePart, 'groups')
+            rangeValue = semverParse(matchRangePart)
+            rangeOp = if(rangeOp == '' || rangeOp == '=', '==', rangeOp)
+            filtered = dataFilter( \
+                semvers, \
+                "objectGet(semver, 'release') == null && semverCompare(semver, rangeValue) " + rangeOp + ' 0', \
+                objectNew('rangeValue', rangeValue) \
+            )
+        endforeach
         return if(arrayLength(filtered), semverStringify(arrayGet(filtered, 0)))
     endif
 
@@ -300,7 +318,10 @@ endfunction
 
 
 # SemVer range regular expressions
-semverRegexRange = regexNew('^(?<op>|=|<|<=|>|>=)\s*' + semverRegexStrSemver + '$')
+semverRegexRange = regexNew('^(?:|=|<|<=|>|>=)\s*' + semverRegexStrSemverNoMatch + \
+    '(?:\s+(?:|=|<|<=|>|>=)\s*' + semverRegexStrSemverNoMatch + ')*$')
+semverRegexRangeSplit = regexNew('\s+')
+semverRegexRangeOp = regexNew('^(?:=|<|<=|>|>=)$')
 semverRegexCarrot = regexNew('^\\^' + semverRegexStrSemver + '$')
 semverRegexHyphen = regexNew( \
     '^(?<major>0|[1-9]\\d*)(?:\\.(?<minor>0|[1-9]\\d*))?(?:\\.(?<patch>0|[1-9]\\d*))?\\s*-\\s*' + \

@@ -77,7 +77,8 @@ function testSemverMatch_range()
         arrayNew('< 1.0.2', '1.0.1'), \
         arrayNew('< 1.0.0', null), \
         arrayNew('<= 1.0.2', '1.0.2'), \
-        arrayNew('<= 0.0.0', null) \
+        arrayNew('<= 0.0.0', null), \
+        arrayNew('>= 1.0.2 < 2.0.0', '1.1.3') \
     ) do
         range = arrayGet(rangeVersion, 0)
         version = arrayGet(rangeVersion, 1)
