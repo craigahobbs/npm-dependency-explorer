@@ -86,7 +86,8 @@ function unittestEquals(actual, expected, description)
     if actual != expected then
         testName = getGlobal('unittestTestName')
         testFailures = objectGet(getGlobal('unittestTests'), testName)
-        arrayPush(testFailures, if(description != null, description + ' - ', '') + actual + ' != ' + expected)
+        arrayPush(testFailures, if(description != null, description + ' - ', '') + \
+            jsonStringify(actual) + ' != ' + jsonStringify(expected))
     endif
 endfunction
 

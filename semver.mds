@@ -176,10 +176,22 @@ function semverMatch(semvers, range)
     filtered = null
 
     # Range
-    #!!
+    matchRange = regexMatch(semverRegexRange, range)
+    if matchRange != null then
+        groups = objectGet(matchRange, 'groups')
+        rangeOp = objectGet(groups, 'op')
+        rangeValue = semverParse(matchRange)
+        rangeOp = if(rangeOp == '' || rangeOp == '=', '==', rangeOp)
+        filtered = dataFilter( \
+            semvers, \
+            "objectGet(semver, 'release') == null && semverCompare(semver, rangeValue) " + rangeOp + ' 0', \
+            objectNew('rangeValue', rangeValue) \
+        )
+        return if(arrayLength(filtered), semverStringify(arrayGet(filtered, 0)))
+    endif
 
     # Hypen range
-    matchHyphen = regexMatch(semverRangeRegexHyphen, range)
+    matchHyphen = regexMatch(semverRegexHyphen, range)
     if matchHyphen != null then
         groups = objectGet(matchHyphen, 'groups')
         lower = semverNew( \
@@ -203,7 +215,7 @@ function semverMatch(semvers, range)
     endif
 
     # X-range
-    matchX0 = regexMatch(semverRangeRegexX0, range)
+    matchX0 = regexMatch(semverRegexX0, range)
     if matchX0 != null then
         filtered = dataFilter( \
             semvers, \
@@ -212,7 +224,7 @@ function semverMatch(semvers, range)
         )
         return if(arrayLength(filtered), semverStringify(arrayGet(filtered, 0)))
     endif
-    matchX1 = regexMatch(semverRangeRegexX1, range)
+    matchX1 = regexMatch(semverRegexX1, range)
     if matchX1 != null then
         groups = objectGet(matchX1, 'groups')
         major = numberParseInt(objectGet(groups, 'major'))
@@ -225,7 +237,7 @@ function semverMatch(semvers, range)
         )
         return if(arrayLength(filtered), semverStringify(arrayGet(filtered, 0)))
     endif
-    matchX2 = regexMatch(semverRangeRegexX2, range)
+    matchX2 = regexMatch(semverRegexX2, range)
     if matchX2 != null then
         groups = objectGet(matchX2, 'groups')
         major = numberParseInt(objectGet(groups, 'major'))
@@ -241,7 +253,7 @@ function semverMatch(semvers, range)
     endif
 
     # Tilde range (major-minor)
-    matchTilde2 = regexMatch(semverRangeRegexTilde2, range)
+    matchTilde2 = regexMatch(semverRegexTilde2, range)
     if matchTilde2 != null then
         groups = objectGet(matchTilde2, 'groups')
         major = numberParseInt(objectGet(groups, 'major'))
@@ -257,7 +269,7 @@ function semverMatch(semvers, range)
     endif
 
     # Carrot range
-    matchCarrot = regexMatch(semverRangeRegexCarrot, range)
+    matchCarrot = regexMatch(semverRegexCarrot, range)
     if matchCarrot != null then
         groups = objectGet(matchCarrot, 'groups')
         major = numberParseInt(objectGet(groups, 'major'))
@@ -288,12 +300,13 @@ endfunction
 
 
 # SemVer range regular expressions
-semverRangeRegexCarrot = regexNew('^\\^' + semverRegexStrSemver + '$')
-semverRangeRegexHyphen = regexNew( \
+semverRegexRange = regexNew('^(?<op>|=|<|<=|>|>=)\s*' + semverRegexStrSemver + '$')
+semverRegexCarrot = regexNew('^\\^' + semverRegexStrSemver + '$')
+semverRegexHyphen = regexNew( \
     '^(?<major>0|[1-9]\\d*)(?:\\.(?<minor>0|[1-9]\\d*))?(?:\\.(?<patch>0|[1-9]\\d*))?\\s*-\\s*' + \
     '(?<major2>0|[1-9]\\d*)(?:\\.(?<minor2>0|[1-9]\\d*))?(?:\\.(?<patch2>0|[1-9]\\d*))?$' \
 )
-semverRangeRegexX0 = regexNew('^[xX*]?$')
-semverRangeRegexX1 = regexNew('^(?<major>0|[1-9]\\d*)(?:\\.[xX*]){0,2}$')
-semverRangeRegexX2 = regexNew('^(?<major>0|[1-9]\\d*)(?:\\.(?<minor>0|[1-9]\\d*))(?:\\.[xX*])?$')
-semverRangeRegexTilde2 = regexNew('^~(?<major>0|[1-9]\\d*)\\.(?<minor>0|[1-9]\\d*)')
+semverRegexX0 = regexNew('^[xX*]?$')
+semverRegexX1 = regexNew('^(?<major>0|[1-9]\\d*)(?:\\.[xX*]){0,2}$')
+semverRegexX2 = regexNew('^(?<major>0|[1-9]\\d*)(?:\\.(?<minor>0|[1-9]\\d*))(?:\\.[xX*])?$')
+semverRegexTilde2 = regexNew('^~(?<major>0|[1-9]\\d*)\\.(?<minor>0|[1-9]\\d*)')
