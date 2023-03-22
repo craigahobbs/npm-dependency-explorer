@@ -4,6 +4,7 @@
 
 # Test statistics
 unittestTests = objectNew()
+unittestWarnings = arrayNew()
 
 
 # Run a unit test
@@ -15,7 +16,7 @@ function unittestRunTest(testName)
 
     # Test run multiple times?
     if objectHas(unittestTests, testName) then
-        markdownPrint('', 'Test "' + markdownEscape(testName) + '" run multiple times')
+        arrayPush(unittestWarnings, 'Test "' + testName + '" run multiple times')
         return
     endif
     testFailures = arrayNew()
@@ -25,7 +26,7 @@ function unittestRunTest(testName)
     # Get the test func
     testFn = getGlobal(testName)
     if testFn == null then
-        markdownPrint('', 'Test "' + markdownEscape(testName) + '" not found')
+        arrayPush(unittestWarnings, 'Test "' + testName + '" not found')
         return
     endif
 
@@ -39,7 +40,16 @@ endfunction
 
 # Unit test report
 function unittestReport()
+    # Report any warnings
+    if arrayLength(unittestWarnings) then
+        markdownPrint('', '## Warnings')
+        foreach warning in unittestWarnings do
+            markdownPrint('', '- ' + markdownEscape(warning))
+        endforeach
+    endif
+
     # Report each test result
+    markdownPrint('', '## Test Results')
     testFailCount = 0
     testNames = arraySort(objectKeys(unittestTests))
     foreach testName in testNames do
@@ -67,6 +77,7 @@ endfunction
 # Reset unit test data
 function unittestReset()
     setGlobal('unittestTests', objectNew())
+    setGlobal('unittestWarnings', arrayNew())
 endfunction
 
 
