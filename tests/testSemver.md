@@ -1,8 +1,8 @@
 # semver Tests
 
 ~~~ markdown-script
-include 'semver.mds'
-include 'unittest.mds'
+include '../semver.mds'
+include '../include/unittest.mds'
 
 
 function testSemverParse()
