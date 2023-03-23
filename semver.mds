@@ -199,10 +199,8 @@ endfunction
 
 # Match a SemVer range part
 function semverMatchPart(semvers, range)
-    # Trim space off the range string
-    range = stringTrim(range)
-
     # Empty range?
+    range = stringTrim(range)
     if range == '' then
         return dataFilter(semvers, "objectGet(semver, 'release') == null")
     endif
@@ -252,12 +250,29 @@ function semverMatchPart(semvers, range)
         lower = semverParse(matchHyphen)
         upper = semverParse(matchHyphen, '2')
         groups = objectGet(matchHyphen, 'groups')
+        hasLowerRelease = objectGet(lower, 'release') != null
         hasUpperPatch = regexTest(semverRegexDigits, objectGet(groups, 'patch2'))
+
+        # Filter pre-release versions
+        if hasLowerRelease then
+            filtered = dataFilter( \
+                semvers, \
+                "objectGet(semver, 'release') == null || (major == lowerMajor && minor == lowerMinor && patch == lowerPatch)", \
+                objectNew( \
+                    'lowerMajor', objectGet(lower, 'major'), \
+                    'lowerMinor', objectGet(lower, 'minor'), \
+                    'lowerPatch', objectGet(lower, 'patch') \
+                ) \
+            )
+        else then
+            filtered = dataFilter(semvers, "objectGet(semver, 'release') == null")
+        endif
+
+        # Filter the the hyphen range
         return dataFilter( \
-            semvers, \
-            "objectGet(semver, 'release') == null && semverCompare(semver, lower) >= 0 && " + \
-                'if(hasUpperPatch, semverCompare(semver, upper) <= 0, semverCompare(semver, upper) < 0)', \
-            objectNew('lower', lower, 'upper', upper, 'hasUpperPatch', hasUpperPatch) \
+            filtered, \
+            'semverCompare(semver, lower) >= 0 && semverCompare(semver, upper) ' + if(hasUpperPatch, '<=', '<') + ' 0', \
+            objectNew('lower', lower, 'upper', upper) \
         )
     endif
 
