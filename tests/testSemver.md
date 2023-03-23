@@ -203,5 +203,28 @@ endfunction
 unittestRunTest('testSemverMatch_carrot')
 
 
+function testSemverMatch_space()
+    versions = semverVersions(arrayNew(\
+        '0.0.1', '0.0.2', '0.0.3', \
+        '0.1.1', '0.1.2', '0.1.3', \
+        '1.0.1', '1.0.2', '1.0.3', \
+        '1.1.1', '1.1.2', '1.1.3' \
+    ))
+    foreach rangeVersion in arrayNew( \
+        arrayNew(' ', '1.1.3'), \
+        arrayNew(' ^ 1.0.1 ', '1.1.3'), \
+        arrayNew(' ~ 1.0.1 ', '1.0.3'), \
+        arrayNew(' 1.0.1  -  2 ', '1.1.3'), \
+        arrayNew(' >= 1 < 2 ', '1.1.3'), \
+        arrayNew(' 1 ', '1.1.3') \
+    ) do
+        range = arrayGet(rangeVersion, 0)
+        version = arrayGet(rangeVersion, 1)
+        unittestEquals(semverMatch(versions, range), version, jsonStringify(range))
+    endforeach
+endfunction
+unittestRunTest('testSemverMatch_space')
+
+
 unittestReport()
 ~~~

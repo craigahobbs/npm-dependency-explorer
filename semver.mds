@@ -199,17 +199,12 @@ endfunction
 
 # Match a SemVer range part
 function semverMatchPart(semvers, range)
-    # Tilde range
-    matchTilde = regexMatch(semverRegexTilde, range)
-    if matchTilde != null then
-        groups = objectGet(matchTilde, 'groups')
-        lower = semverParse(matchTilde)
-        upper = semverNew(objectGet(lower, 'major'), objectGet(lower, 'minor') + 1, 0)
-        return dataFilter( \
-            semvers, \
-            'semverCompare(semver, lower) >= 0 && semverCompare(semver, upper) < 0', \
-            objectNew('lower', lower, 'upper', upper) \
-        )
+    # Trim space off the range string
+    range = stringTrim(range)
+
+    # Empty range?
+    if range == '' then
+        return dataFilter(semvers, "objectGet(semver, 'release') == null")
     endif
 
     # Carrot range
@@ -238,6 +233,19 @@ function semverMatchPart(semvers, range)
         )
     endif
 
+    # Tilde range
+    matchTilde = regexMatch(semverRegexTilde, range)
+    if matchTilde != null then
+        groups = objectGet(matchTilde, 'groups')
+        lower = semverParse(matchTilde)
+        upper = semverNew(objectGet(lower, 'major'), objectGet(lower, 'minor') + 1, 0)
+        return dataFilter( \
+            semvers, \
+            'semverCompare(semver, lower) >= 0 && semverCompare(semver, upper) < 0', \
+            objectNew('lower', lower, 'upper', upper) \
+        )
+    endif
+
     # Hypen range
     matchHyphen = regexMatch(semverRegexHyphen, range)
     if matchHyphen != null then
@@ -251,11 +259,6 @@ function semverMatchPart(semvers, range)
                 'if(hasUpperPatch, semverCompare(semver, upper) <= 0, semverCompare(semver, upper) < 0)', \
             objectNew('lower', lower, 'upper', upper, 'hasUpperPatch', hasUpperPatch) \
         )
-    endif
-
-    # Empty range?
-    if range == '' then
-        return dataFilter(semvers, "objectGet(semver, 'release') == null")
     endif
 
     # Range
