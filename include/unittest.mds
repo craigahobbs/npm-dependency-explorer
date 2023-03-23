@@ -2,6 +2,12 @@
 # https://github.com/craigahobbs/craigahobbs.github.io/blob/main/LICENSE
 
 
+# Include sentinel
+if getGlobal('unittestTests') then
+    return
+endif
+
+
 # Test statistics
 unittestTests = objectNew()
 unittestWarnings = arrayNew()

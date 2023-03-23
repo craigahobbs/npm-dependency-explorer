@@ -2,6 +2,12 @@
 # https://github.com/craigahobbs/craigahobbs.github.io/blob/main/LICENSE
 
 
+# Include sentinel
+if getGlobal('formsLinkButtonElements') then
+    return
+endif
+
+
 function formsTextElements(id, text, size, onEnter)
     return objectNew( \
         'html', 'input', \

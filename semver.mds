@@ -16,17 +16,20 @@ endfunction
 
 
 # Parse SemVer text to a SemVer object
-function semverParse(text)
+function semverParse(text, groupSuffix)
     semver = null
 
     # Match the SemVer text
     match = if(stringLength(text) != null, regexMatch(semverRegexSemver, text), text)
     if match != null then
         groups = objectGet(match, 'groups')
+        if groupSuffix == null then
+            groupSuffix = ''
+        endif
 
         # Parse the release text
         release = null
-        releaseText = objectGet(groups, 'release')
+        releaseText = objectGet(groups, 'release' + groupSuffix)
         if releaseText != null then
             release = arrayNew()
             foreach part in stringSplit(releaseText, '.') do
@@ -37,12 +40,16 @@ function semverParse(text)
         endif
 
         # Return the SemVer object
+        major = objectGet(groups, 'major' + groupSuffix)
+        minor = objectGet(groups, 'minor' + groupSuffix)
+        patch = objectGet(groups, 'patch' + groupSuffix)
+        build = objectGet(groups, 'build' + groupSuffix)
         semver = objectNew( \
-            'major', numberParseInt(objectGet(groups, 'major')), \
-            'minor', numberParseInt(objectGet(groups, 'minor')), \
-            'patch', numberParseInt(objectGet(groups, 'patch')), \
+            'major', if(major != null, numberParseInt(major), 0), \
+            'minor', if(minor != null, numberParseInt(minor), 0), \
+            'patch', if(patch != null, numberParseInt(patch), 0), \
             'release', release, \
-            'build', objectGet(groups, 'build') \
+            'build', build \
         )
     endif
 
@@ -51,12 +58,10 @@ endfunction
 
 
 # SemVer parsing regular expressions
-semverRegexStrSemver = '(?<major>0|[1-9]\\d*)\\.(?<minor>0|[1-9]\\d*)\\.(?<patch>0|[1-9]\\d*)' + \
+semverRegexStrReleaseBuild = \
     '(?:-(?<release>(?:0|[1-9]\\d*|\\d*[a-zA-Z-][0-9a-zA-Z-]*)(?:\\.(?:0|[1-9]\\d*|\\d*[a-zA-Z-][0-9a-zA-Z-]*))*))?' + \
     '(?:\\+(?<build>[0-9a-zA-Z-]+(?:\\.[0-9a-zA-Z-]+)*))?'
-semverRegexStrSemverNoMatch = stringReplace(stringReplace(stringReplace(stringReplace(stringReplace( \
-    semverRegexStrSemver, '<major>', ':'), '<minor>', ':'), '<patch>', ':'), '<release>', ':'), '<build>', ':')
-semverRegexSemver = regexNew('^' + semverRegexStrSemver + '$')
+semverRegexSemver = regexNew('^(?<major>0|[1-9]\\d*)\\.(?<minor>0|[1-9]\\d*)\\.(?<patch>0|[1-9]\\d*)' + semverRegexStrReleaseBuild + '$')
 semverRegexDigits = regexNew('^\d+$')
 
 
@@ -194,95 +199,62 @@ endfunction
 
 # Match a SemVer range part
 function semverMatchPart(semvers, range)
+    # X-range
+    matchX0 = regexMatch(semverRegexX0, range)
+    if matchX0 != null then
+        return dataFilter(semvers, "objectGet(semver, 'release') == null")
+    endif
+    matchX = regexMatch(semverRegexX, range)
+    if matchX != null then
+        lower = semverParse(matchX)
+        if objectGet(matchX, 'minor') != null then
+            upper = semverNew(objectGet(lower, 'major'), objectGet(lower, 'minor') + 1, 0)
+        else then
+            upper = semverNew(objectGet(lower, 'major') + 1, 0, 0)
+        endif
+        return dataFilter( \
+            semvers, \
+            "objectGet(semver, 'release') == null && semverCompare(semver, lower) >= 0 && semverCompare(semver, upper) < 0", \
+            objectNew('lower', lower, 'upper', upper) \
+        )
+    endif
+
     # Range
     matchRange = regexMatch(semverRegexRange, range)
     if matchRange != null then
         filtered = semvers
-        rangePartOp = null
-        foreach rangePart in stringSplit(range, semverRegexRangeSplit) do
-            # Range operator?
-            if regexMatch(semverRegexRangeOp, rangePart) then
-                rangePartOp = rangePart
-                continue
-            endif
-
-            # Get the range filter operator
-            if rangePartOp != null then
-                rangeOp = if(rangePartOp == '=', '==', rangePartOp)
-                rangePartOp = null
-            else then
+        rangeParts = range
+        matchRangePart = regexMatch(semverRegexRangePart, rangeParts)
+        while matchRangePart != null do
+            groups = objectGet(matchRangePart, 'groups')
+            rangeOp = objectGet(groups, 'op')
+            if rangeOp == '' || rangeOp == '=' then
                 rangeOp = '=='
             endif
-
-            # Parse the range part semver
-            matchRangePart = regexMatch(semverRegexStrSemver, rangePart)
-            groups = objectGet(matchRangePart, 'groups')
             rangeValue = semverParse(matchRangePart)
-            rangeOp = if(rangeOp == '' || rangeOp == '=', '==', rangeOp)
             filtered = dataFilter( \
                 filtered, \
                 "objectGet(semver, 'release') == null && semverCompare(semver, rangeValue) " + rangeOp + ' 0', \
                 objectNew('rangeValue', rangeValue) \
             )
-        endforeach
+            rangeParts = stringSlice(rangeParts, stringLength(arrayGet(matchRangePart, 0)))
+            matchRangePart = regexMatch(semverRegexRangePart, rangeParts)
+        endwhile
         return filtered
     endif
 
     # Hypen range
     matchHyphen = regexMatch(semverRegexHyphen, range)
     if matchHyphen != null then
+        lower = semverParse(matchHyphen)
+        upper = semverParse(matchHyphen, '2')
         groups = objectGet(matchHyphen, 'groups')
-        lower = semverNew( \
-            numberParseInt(objectGet(groups, 'major')), \
-            if(objectGet(groups, 'minor'), numberParseInt(objectGet(groups, 'minor')), 0), \
-            if(objectGet(groups, 'patch'), numberParseInt(objectGet(groups, 'patch')), 0) \
-        )
-        upper = semverNew( \
-            numberParseInt(objectGet(groups, 'major2')), \
-            if(objectGet(groups, 'minor2'), numberParseInt(objectGet(groups, 'minor2')), 0), \
-            if(objectGet(groups, 'patch2'), numberParseInt(objectGet(groups, 'patch2')), 0) \
-        )
         hasUpperPatch = objectGet(groups, 'patch2') != null
         return dataFilter( \
             semvers, \
             "objectGet(semver, 'release') == null && semverCompare(semver, lower) >= 0 && " + \
                 'if(hasUpperPatch, semverCompare(semver, upper) <= 0, semverCompare(semver, upper) < 0)', \
             objectNew('lower', lower, 'upper', upper, 'hasUpperPatch', hasUpperPatch) \
-        )
-    endif
-
-    # X-range
-    matchX0 = regexMatch(semverRegexX0, range)
-    if matchX0 != null then
-        return dataFilter( \
-            semvers, \
-            "objectGet(semver, 'release') == null", \
-            objectNew('lower', lower, 'upper', upper) \
-        )
-    endif
-    matchX1 = regexMatch(semverRegexX1, range)
-    if matchX1 != null then
-        groups = objectGet(matchX1, 'groups')
-        major = numberParseInt(objectGet(groups, 'major'))
-        lower = semverNew(major, 0, 0)
-        upper = semverNew(major + 1, 0, 0)
-        return dataFilter( \
-            semvers, \
-            "objectGet(semver, 'release') == null && semverCompare(semver, lower) >= 0 && semverCompare(semver, upper) < 0", \
-            objectNew('lower', lower, 'upper', upper) \
-        )
-    endif
-    matchX2 = regexMatch(semverRegexX2, range)
-    if matchX2 != null then
-        groups = objectGet(matchX2, 'groups')
-        major = numberParseInt(objectGet(groups, 'major'))
-        minor = numberParseInt(objectGet(groups, 'minor'))
-        lower = semverNew(major, minor, 0)
-        upper = semverNew(major, minor + 1, 0)
-        return dataFilter( \
-            semvers, \
-            "objectGet(semver, 'release') == null && semverCompare(semver, lower) >= 0 && semverCompare(semver, upper) < 0", \
-            objectNew('upperMajor', upperMajor, 'upperMinor', upperMinor, 'lower', lower, 'upper', upper) \
         )
     endif
 
@@ -333,16 +305,23 @@ endfunction
 
 # SemVer range regular expressions
 semverRegexRangePartSplit = regexNew('\\s*\\|\\|\\s*')
-semverRegexRange = regexNew('^(?:|=|<|<=|>|>=)\\s*' + semverRegexStrSemverNoMatch + \
-    '(?:\\s+(?:|=|<|<=|>|>=)\\s*' + semverRegexStrSemverNoMatch + ')*$')
-semverRegexRangeSplit = regexNew('\\s+')
-semverRegexRangeOp = regexNew('^(?:=|<|<=|>|>=)$')
-semverRegexCarrot = regexNew('^\\^' + semverRegexStrSemver + '$')
-semverRegexHyphen = regexNew( \
-    '^(?<major>0|[1-9]\\d*)(?:\\.(?<minor>0|[1-9]\\d*))?(?:\\.(?<patch>0|[1-9]\\d*))?\\s*-\\s*' + \
-    '(?<major2>0|[1-9]\\d*)(?:\\.(?<minor2>0|[1-9]\\d*))?(?:\\.(?<patch2>0|[1-9]\\d*))?$' \
-)
-semverRegexX0 = regexNew('^[xX*]?$')
-semverRegexX1 = regexNew('^(?<major>0|[1-9]\\d*)(?:\\.[xX*]){0,2}$')
-semverRegexX2 = regexNew('^(?<major>0|[1-9]\\d*)(?:\\.(?<minor>0|[1-9]\\d*))(?:\\.[xX*])?$')
+semverRegexStrVersion = \
+    '(?:' + \
+    '[xX*](?:\\.[xX*]){0,2}|' + \
+    '(?<major>0|[1-9]\\d*)(?:(?:\\.[xX*]){0,2}|\\.(?<minor>0|[1-9]\\d*)(?:(?:\\.[xX*])|\\.(?<patch>0|[1-9]\\d*))?)?' + \
+    ')' + \
+    semverRegexStrReleaseBuild
+semverRegexStrVersion2 = stringReplace(stringReplace(stringReplace(stringReplace(stringReplace(semverRegexStrVersion, \
+    '<major>', '<major2>'), '<minor>', '<minor2>'), '<patch>', '<patch2>'), '<release>', '<release2>'), '<build>', '<build2>')
+semverRegexStrVersionNoMatch = stringReplace(stringReplace(stringReplace(stringReplace(stringReplace(semverRegexStrVersion, \
+    '<major>', ':'), '<minor>', ':'), '<patch>', ':'), '<release>', ':'), '<build>', ':')
+semverRegexVersion = regexNew('^' + semverRegexStrVersion + '$')
+semverRegexRange = regexNew('^(?:|=|<|<=|>|>=)\\s*' + semverRegexStrVersionNoMatch + \
+    '(?:\\s+(?:|=|<|<=|>|>=)\\s*' + semverRegexStrVersionNoMatch + ')*$')
+semverRegexRangePart = regexNew('^(?<op>|=|<|<=|>|>=)\\s*' + semverRegexStrVersion + '\\s*')
+semverRegexCarrot = regexNew('^\\^' + semverRegexStrVersion + '$')
+semverRegexHyphen = regexNew('^' + semverRegexStrVersion + '\\s*-\\s*' + semverRegexStrVersion2 + '$')
 semverRegexTilde2 = regexNew('^~(?<major>0|[1-9]\\d*)\\.(?<minor>0|[1-9]\\d*)')
+semverRegexX0 = regexNew('^[xX*]?$')
+semverRegexX = regexNew( \
+    '^(?<major>0|[1-9]\\d*)(?:(?:\\.[xX*]){0,2}|\\.(?<minor>0|[1-9]\\d*)(?:(?:\\.[xX*])?))' + semverRegexStrReleaseBuild + '$')
