@@ -205,6 +205,20 @@ function semverMatchPart(semvers, range)
         return dataFilter(semvers, "objectGet(semver, 'release') == null")
     endif
 
+    # Tilde range
+    matchTilde = regexMatch(semverRegexTilde, range)
+    if matchTilde != null then
+        lower = semverParse(matchTilde)
+        groups = objectGet(matchTilde, 'groups')
+        lowerHasMinor = regexTest(semverRegexDigits, objectGet(groups, 'minor'))
+        if lowerHasMinor then
+            upper = semverNew(objectGet(lower, 'major'), objectGet(lower, 'minor') + 1, 0)
+        else then
+            upper = semverNew(objectGet(lower, 'major') + 1, 0, 0)
+        endif
+        return semverMatchPartFilter(semvers, lower, upper)
+    endif
+
     # Carrot range
     matchCarrot = regexMatch(semverRegexCarrot, range)
     if matchCarrot != null then
@@ -219,15 +233,6 @@ function semverMatchPart(semvers, range)
             if(major >= 1, 0, if(minor >= 1, 0, patch + 1)), \
             arrayNew(0) \
         )
-        return semverMatchPartFilter(semvers, lower, upper)
-    endif
-
-    # Tilde range
-    matchTilde = regexMatch(semverRegexTilde, range)
-    if matchTilde != null then
-        groups = objectGet(matchTilde, 'groups')
-        lower = semverParse(matchTilde)
-        upper = semverNew(objectGet(lower, 'major'), objectGet(lower, 'minor') + 1, 0)
         return semverMatchPartFilter(semvers, lower, upper)
     endif
 

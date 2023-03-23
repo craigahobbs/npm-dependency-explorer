@@ -76,6 +76,30 @@ endfunction
 unittestRunTest('testSemverMatch_parts')
 
 
+function testSemverMatch_tilde()
+    versions = semverVersions(arrayNew(\
+        '1.0.1', '1.0.2', '1.0.3', \
+        '1.1.1', '1.1.2', '1.1.3', \
+        '1.2.1', '1.2.2', '1.2.3', \
+        '2.0.0-beta.1', '2.0.0', '2.0.1', \
+        '2.1.0-beta.1', '2.1.0-beta.2' \
+    ))
+    foreach rangeVersion in arrayNew( \
+        arrayNew('~1', '1.2.3'), \
+        arrayNew('~1.1', '1.1.3'), \
+        arrayNew('~1.1.2', '1.1.3'), \
+        arrayNew('~1.3', null), \
+        arrayNew('~2.0.0-beta.1', '2.0.1'), \
+        arrayNew('~2.1.0-beta.1', '2.1.0-beta.2') \
+    ) do
+        range = arrayGet(rangeVersion, 0)
+        version = arrayGet(rangeVersion, 1)
+        unittestEquals(semverMatch(versions, range), version, jsonStringify(range))
+    endforeach
+endfunction
+unittestRunTest('testSemverMatch_tilde')
+
+
 function testSemverMatch_carrot()
     versions = semverVersions(arrayNew(\
         '0.0.1', '0.0.2', '0.0.3', \
@@ -108,20 +132,6 @@ function testSemverMatch_carrot()
     endforeach
 endfunction
 unittestRunTest('testSemverMatch_carrot')
-
-
-function testSemverMatch_tilde()
-    versions = semverVersions(arrayNew('1.2.2', '1.2.2-rc.2+1235'))
-    foreach rangeVersion in arrayNew( \
-        arrayNew('~1.2', '1.2.2'), \
-        arrayNew('~1.3', null) \
-    ) do
-        range = arrayGet(rangeVersion, 0)
-        version = arrayGet(rangeVersion, 1)
-        unittestEquals(semverMatch(versions, range), version, jsonStringify(range))
-    endforeach
-endfunction
-unittestRunTest('testSemverMatch_tilde')
 
 
 function testSemverMatch_hyphen()
