@@ -135,6 +135,7 @@ async function ndeMain()
             '**Direct:** ' + linkDirectAll + ' | ' + linkDirect + if(hasLatest, ' \\', ''), \
             if(hasLatest, '**Latest:** ' + linkLatestAll + ' | ' + linkLatest, '') \
         )
+
         # Add the dependency count field
         dataCalculatedField(dependenciesFiltered, 'Dependencies', 'npmPackageDependencyCount(cache, Package, Version)', \
             objectNew('cache', cache))
@@ -202,7 +203,6 @@ function ndePackageNameOnClick()
     packageName = stringTrim(getDocumentInputValue('package-name-text'))
     setWindowLocation(ndeCleanURL(objectNew('name', packageName)))
 endfunction
-
 
 
 # Render the package version links
