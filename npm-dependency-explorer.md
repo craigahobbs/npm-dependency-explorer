@@ -75,22 +75,10 @@ async function ndeMain()
     warnings = objectGet(dependencyStats, 'warnings')
 
     # Filter to dependencies that have a newer version?
-    hasLatest = arrayLength(dataFilter(dependenciesFiltered, 'Latest != ""')) > 0
+    hasLatest = arrayLength(dataFilter(dependenciesFiltered, "Latest != ''")) > 0
     if hasLatest && vLatest then
         dependenciesFiltered = dataFilter(dependenciesFiltered, "Latest != ''")
     endif
-
-    # Compute the direct filter links
-    linkDirectAll = if(!vDirect, 'All', '[All](' + ndeURL(objectNew('direct', 0)) + ')')
-    linkDirect = if(vDirect, 'Direct', '[Direct](' + ndeURL(objectNew('direct', 1)) + ')')
-
-    # Compute the latest filter links
-    linkLatestAll = if(!vLatest, 'All', '[All](' + ndeURL(objectNew('latest', 0)) + ')')
-    linkLatest = if(vLatest, 'Latest', '[Latest](' + ndeURL(objectNew('latest', 1)) + ')')
-
-    # Compute the sort links
-    linkSortName = if(vSort != 'Dependencies', 'Name', '[Name](' + ndeURL(objectNew('sort', '')) + ')')
-    linkSortDependencies = if(vSort == 'Dependencies', 'Dependencies', '[Dependencies](' + ndeURL(objectNew('sort', 'Dependencies')) + ')')
 
     # Compute the dependency type links
     linkPackage = if(dependencyType == 'Package', 'Package', '[Package](' + ndeURL(objectNew('type', '')) + ')')
@@ -105,13 +93,6 @@ async function ndeMain()
         '**Direct ' + dependenciesDescriptor + 'dependencies:** ' + objectGet(dependencyStats, 'countDirect') + ' \\', \
         '**Total ' + dependenciesDescriptor + 'dependencies:** ' + objectGet(dependencyStats, 'count'), \
         '', \
-        '**Direct:** ' + linkDirectAll + ' | ' + linkDirect + ' \\' \
-    )
-    if hasLatest then
-        markdownPrint('**Latest:** ' + linkLatestAll + ' | ' + linkLatest + ' \\')
-    endif
-    markdownPrint( \
-        '**Sort:** ' + linkSortName + ' | ' + linkSortDependencies + ' \\', \
         '**Type:** ' + linkPackage + ' | ' + linkDevelopment + ' | ' + linkOptional + ' | ' + linkPeer \
     )
 
@@ -132,10 +113,30 @@ async function ndeMain()
     endif
 
     # Render the dependency table
-    dependenciesTable = arrayCopy(dependenciesFiltered)
-    if arrayLength(dependenciesTable) then
+    if arrayLength(dependenciesFiltered) then
+        # Compute the sort links
+        linkSortName = if(vSort != 'Dependencies', 'Name', '[Name](' + ndeURL(objectNew('sort', '')) + ')')
+        linkSortDependencies = if(vSort == 'Dependencies', 'Dependencies', '[Dependencies](' + ndeURL(objectNew('sort', 'Dependencies')) + ')')
+
+        # Compute the direct filter links
+        linkDirectAll = if(!vDirect, 'All', '[All](' + ndeURL(objectNew('direct', 0)) + ')')
+        linkDirect = if(vDirect, 'Direct', '[Direct](' + ndeURL(objectNew('direct', 1)) + ')')
+
+        # Compute the latest filter links
+        linkLatestAll = if(!vLatest, 'All', '[All](' + ndeURL(objectNew('latest', 0)) + ')')
+        linkLatest = if(vLatest, 'Latest', '[Latest](' + ndeURL(objectNew('latest', 1)) + ')')
+
+        # Render the filter/sort links
+        markdownPrint( \
+            '', \
+            '### ' + if(dependencyType != 'Package', dependencyType, '') + ' Dependencies', \
+            '', \
+            '**Sort:** ' + linkSortName + ' | ' + linkSortDependencies + ' \\', \
+            '**Direct:** ' + linkDirectAll + ' | ' + linkDirect + if(hasLatest, ' \\', ''), \
+            if(hasLatest, '**Latest:** ' + linkLatestAll + ' | ' + linkLatest, '') \
+        )
         # Add the dependency count field
-        dataCalculatedField(dependenciesTable, 'Dependencies', 'npmPackageDependencyCount(cache, Package, Version)', \
+        dataCalculatedField(dependenciesFiltered, 'Dependencies', 'npmPackageDependencyCount(cache, Package, Version)', \
             objectNew('cache', cache))
 
         # Sort the table data
@@ -143,17 +144,16 @@ async function ndeMain()
         if vSort == 'Dependencies' then
             sortFields = arrayExtend(arrayNew(arrayNew('Dependencies', 1)), sortFields)
         endif
-        dataSort(dependenciesTable, sortFields)
+        dataSort(dependenciesFiltered, sortFields)
 
         # Make the name field links
-        dataCalculatedField(dependenciesTable, 'Package', \
+        dataCalculatedField(dependenciesFiltered, 'Package', \
             "'[' + markdownEscape(Package) + '](' + ndeCleanURL(objectNew('name', Package, 'version', Version)) + ')'")
-        dataCalculatedField(dependenciesTable, 'Dependent', \
+        dataCalculatedField(dependenciesFiltered, 'Dependent', \
             "'[' + markdownEscape(Dependent) + '](' + ndeCleanURL(objectNew('name', Dependent, 'version', [Dependent Version])) + ')'")
 
         # Render the dependencies table
-        markdownPrint('### ' + if(dependencyType != 'Package', dependencyType, '') + ' Dependencies')
-        dataTable(dependenciesTable, objectNew( \
+        dataTable(dependenciesFiltered, objectNew( \
             'categories', arrayNew('Package', 'Version'), \
             'fields', if(hasLatest, \
                 arrayNew('Latest', 'Range', 'Dependent', 'Dependent Version', 'Dependencies'), \
