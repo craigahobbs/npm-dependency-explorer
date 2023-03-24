@@ -189,10 +189,10 @@ function ndeRenderForm(cache, packageName, packageVersion)
 
     # Render example packages
     markdownPrint('', '## Examples')
-    foreach exampleName in arrayNew( \
+    foreach exampleName in arraySort(arrayNew( \
         'ava', 'c8', 'eslint', 'jsdoc', 'jsdom', 'mermaid', 'npm', \
         'calc-script', 'element-model', 'markdown-model', 'markdown-up', 'schema-markdown' \
-    ) do
+    )) do
         markdownPrint('', '[' + markdownEscape(exampleName) + "](#var.vName='" + encodeURIComponent(exampleName) + "')")
     endforeach
 endfunction
