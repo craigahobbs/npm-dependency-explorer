@@ -1,8 +1,7 @@
-# semver.mds Tests
+# Licensed under the MIT License
+# https://github.com/craigahobbs/npm-dependency-explorer/blob/main/LICENSE
 
-~~~ markdown-script
 include '../semver.mds'
-include '../include/unittest.mds'
 
 
 function testSemverParse()
@@ -237,7 +236,3 @@ function testSemverMatch_space()
     endforeach
 endfunction
 unittestRunTest('testSemverMatch_space')
-
-
-unittestReport()
-~~~
