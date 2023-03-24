@@ -180,7 +180,7 @@ endfunction
 function semverMatch(semvers, range)
     # Compute all matched semvers
     matchedSemvers = arrayNew()
-    foreach rangePart in stringSplit(range, semverRegexRangePartSplit) do
+    foreach rangePart in stringSplit(range, semverRegexRangeSplit) do
         partSemvers = semverMatchPart(semvers, rangePart)
         if partSemvers != null then
             arrayExtend(matchedSemvers, partSemvers)
@@ -230,8 +230,7 @@ function semverMatchPart(semvers, range)
         upper = semverNew( \
             if(major >= 1, major + 1, major), \
             if(major >= 1, 0, if(minor >= 1, minor + 1, minor)), \
-            if(major >= 1, 0, if(minor >= 1, 0, patch + 1)), \
-            arrayNew(0) \
+            if(major >= 1, 0, if(minor >= 1, 0, patch + 1)) \
         )
         return semverMatchPartFilter(semvers, lower, upper)
     endif
@@ -322,7 +321,7 @@ endfunction
 
 
 # SemVer range regular expressions
-semverRegexRangePartSplit = regexNew('\\s*\\|\\|\\s*')
+semverRegexRangeSplit = regexNew('\\s*\\|\\|\\s*')
 semverRegexStrVersion = \
     '(?<major>[xX*]|0|[1-9]\\d*)(?:\\.(?<minor>[xX*]|0|[1-9]\\d*)(?:\\.(?<patch>[xX*]|0|[1-9]\\d*)' + semverRegexStrReleaseBuild + ')?)?'
 semverRegexStrVersion2 = stringReplace(stringReplace(stringReplace(stringReplace(stringReplace(semverRegexStrVersion, \
