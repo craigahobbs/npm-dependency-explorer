@@ -49,25 +49,25 @@ async function ndeMain()
         '', \
         '**Description:** ' + markdownEscape(objectGet(packageJSON, 'description')) \
     )
-    if !(vVersionSelect || vVersionChart) then
-        markdownPrint( \
-            '', \
-            '**Version:** ' + markdownEscape(packageVersion), \
-            '([versions](' + ndeCleanURL(objectNew('name', packageName, 'version', packageVersion, 'versionSelect', 1)) + ') | ', \
-            '[chart](' + ndeCleanURL(objectNew('name', packageName, 'version', packageVersion, 'versionChart', 1)) + '))' \
-        )
-    endif
 
-    # Render the package version selection links, if requested
+    # Render the package version selection links?
     if vVersionSelect then
         ndeRenderVersionLinks(cache, packageName, packageVersion)
         return
 
-    # Render the package version dependency chart, if requested
+    # Render the package version dependency chart?
     else if vVersionChart then
         ndeRenderVersionChart(cache, packageName, packageVersion)
         return
     endif
+
+    # Render the package version
+    markdownPrint( \
+        '', \
+        '**Version:** ' + markdownEscape(packageVersion), \
+        '([versions](' + ndeCleanURL(objectNew('name', packageName, 'version', packageVersion, 'versionSelect', 1)) + ') | ', \
+        '[chart](' + ndeCleanURL(objectNew('name', packageName, 'version', packageVersion, 'versionChart', 1)) + '))' \
+    )
 
     # Load all dependencies and compute the dependency statistics
     dependencyStats = npmPackageStats(cache, packageName, packageVersion, dependencyKey)
@@ -175,15 +175,6 @@ function ndeRenderForm(cache, packageName, packageVersion)
     ))
     setDocumentFocus('package-name-text')
 
-    # Render example packages
-    markdownPrint('', '## Examples')
-    foreach exampleName in arrayNew( \
-        'ava', 'c8', 'calc-script', 'element-model', 'eslint', 'jsdoc', 'jsdom', 'markdown-model', \
-        'markdown-up', 'mermaid', 'npm', 'schema-markdown' \
-    ) do
-        markdownPrint('', '[' + markdownEscape(exampleName) + "](#var.vName='" + encodeURIComponent(exampleName) + "')")
-    endforeach
-
     # Render error messages
     if packageName != null then
         packageData = npmCacheGetPackage(cache, packageName)
@@ -194,6 +185,15 @@ function ndeRenderForm(cache, packageName, packageVersion)
                 markdownEscape(packageName) + '"')
         endif
     endif
+
+    # Render example packages
+    markdownPrint('', '## Examples')
+    foreach exampleName in arrayNew( \
+        'ava', 'c8', 'eslint', 'jsdoc', 'jsdom', 'mermaid', 'npm', \
+        'calc-script', 'element-model', 'markdown-model', 'markdown-up', 'schema-markdown' \
+    ) do
+        markdownPrint('', '[' + markdownEscape(exampleName) + "](#var.vName='" + encodeURIComponent(exampleName) + "')")
+    endforeach
 endfunction
 
 
