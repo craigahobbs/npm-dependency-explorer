@@ -1,7 +1,7 @@
 # npm Dependency Explorer Tests
 
 ~~~ markdown-script
-include '../include/unittest.mds'
+include 'https://craigahobbs.github.io/markdown-up/include/unittest.mds'
 
 # Test includes
 include 'testSemver.mds'

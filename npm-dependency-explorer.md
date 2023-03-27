@@ -2,7 +2,7 @@
 # Licensed under the MIT License
 # https://github.com/craigahobbs/npm-dependency-explorer/blob/main/LICENSE
 
-include 'include/forms.mds'
+include 'https://craigahobbs.github.io/markdown-up/include/forms.mds'
 include 'npm.mds'
 
 
