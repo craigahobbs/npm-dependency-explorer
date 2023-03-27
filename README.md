@@ -16,42 +16,51 @@ features to sort, filter, and visualize package dependencies.
 
 - Compute a package's total dependencies
 
-- Compute a package's total *development* dependencies
+- Compute a package's total development dependencies
 
-- Order dependencies by most sub-dependencies
+- Sort dependencies by the number of sub-dependencies
 
-- Filter to only out-of-date dependencies
+- Filter to display only outdated dependencies
 
-- Compute dependencies with multiple versions
+- Identify dependencies with multiple versions
 
 - Visualize a package's dependencies over time
 
 
-## The Dependency Rules
+## Managing Dependencies
 
-Before taking a package as a dependency, it's important to consider *The Dependency Rules*. The
-rules are:
-
-1. The dependency should give you "something good" - it implements something non-trivial that is not
-   in your language's standard library.
-
-2. The dependency is well-maintained - it has high unit test coverage, maintains
-   backward compatibility, and respects *The Dependency Rules*.
-
-Following these rules is the best way to improve productivity and minimize maintenance headaches.
+Before adding a package as a dependency, it's crucial to carefully consider the potential impact on
+your project's velocity and maintenance costs. While dependencies can provide valuable functionality
+not available in your language's standard library, they also introduce challenges that can slow down
+development and increase the risk of bugs and compatibility issues.
 
 
-## Usage
+### The Dependency Rules
 
-To use the [npm Dependency Explorer], enter the package name you want to explore. The application
-will compute the package's dependencies and display them in a table. From there, you can sort and
-filter the table to find the necessary information.
+Follow *The Dependency Rules* to reduce the risks of dependencies:
+
+- The dependency should provide unique functionality not available in your language's standard
+  library, ensuring that it is genuinely necessary and adds value to your project.
+
+- The dependency should be well-maintained, with extensive unit test coverage, backward
+  compatibility, and respect for The Dependency Rules, ensuring that it remains reliable over time.
+
+Following these rules is the best way to ensure that your project's dependencies are necessary,
+reliable, and well-maintained.
 
 
-## Feedback
+### Reducing Dependencies
 
-I'm always looking for ways to improve the [npm Dependency Explorer]. If you have any feedback or
-suggestions, please let me know by [contacting me][issues].
+By minimizing the number of external dependencies, developers can decrease their project's
+complexity, making it easier to understand and maintain. They can also reduce the time spent
+managing dependencies and waiting for builds and deployments to complete, which can improve
+development velocity and minimize the risk of errors and conflicts.
+
+Managing dependencies is essential to developing reliable, maintainable software. Following The
+Dependency Rules and reducing a project's dependencies can help enhance productivity, decrease
+maintenance costs, and reduce the risk of errors and compatibility issues. The [npm Dependency
+Explorer] can be a valuable tool for exploring dependencies and identifying opportunities to
+simplify and streamline your project.
 
 
 [npm Dependency Explorer]: https://craigahobbs.github.io/npm-dependency-explorer/
