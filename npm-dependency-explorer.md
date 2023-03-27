@@ -258,7 +258,7 @@ async function ndeRenderVersionChart(cache, packageName, packageVersion)
         'y', arrayNew('Dependencies'), \
         'xTicks', objectNew('count', 5), \
         'yTicks', objectNew('count', 5, 'start', 0), \
-        'precision', 0 \
+        'precision', 1 \
     ))
     dataSort(versionDependencies, arrayNew(arrayNew('Version Index', 1)))
     dataTable(versionDependencies, objectNew( \
