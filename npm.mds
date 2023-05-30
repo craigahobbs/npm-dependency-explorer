@@ -210,9 +210,7 @@ endfunction
 
 
 # Compute an npm package's dependency data table
-function npmCacheGetPackageDependencies(cache, dependencies, warnings, packageName, packageVersion, dependencyKey, completed)
-    completed = if(completed != null, completed, objectNew())
-
+function npmCacheGetPackageDependencies(cache, dependencies, warnings, completed, packageName, packageVersion, dependencyKey)
     # Package and version already loaded?
     if !objectHas(completed, packageName) then
         objectSet(completed, packageName, objectNew())
@@ -255,16 +253,17 @@ function npmCacheGetPackageDependencies(cache, dependencies, warnings, packageNa
         ))
 
         # Add the dependency's dependencies
-        npmCacheGetPackageDependencies(cache, dependencies, warnings, dependencyName, dependencyVersion, 'dependencies', completed)
+        npmCacheGetPackageDependencies(cache, dependencies, warnings, completed, dependencyName, dependencyVersion, 'dependencies')
     endforeach
 endfunction
 
 
 # Get a package's total dependency count
-function npmPackageDependencyCount(cache, packageName, packageVersion)
+function npmPackageDependencyCount(cache, packageName, packageVersion, dependencyKey)
     dependencies = arrayNew()
     warnings = arrayNew()
-    npmCacheGetPackageDependencies(cache, dependencies, warnings, packageName, packageVersion, 'dependencies')
+    completed = objectNew()
+    npmCacheGetPackageDependencies(cache, dependencies, warnings, completed, packageName, packageVersion, dependencyKey)
     dependenciesTotal = dataAggregate(dependencies, objectNew( \
         'categories', arrayNew('Package', 'Version'), \
         'measures', arrayNew( \
@@ -280,7 +279,11 @@ function npmPackageStats(cache, packageName, packageVersion, dependencyKey)
     # Get the package dependencies
     dependencies = arrayNew()
     warnings = arrayNew()
-    npmCacheGetPackageDependencies(cache, dependencies, warnings, packageName, packageVersion, dependencyKey)
+    completed = objectNew()
+    npmCacheGetPackageDependencies(cache, dependencies, warnings, completed, packageName, packageVersion, dependencyKey)
+    if dependencyKey != 'devDependencies' then
+        npmCacheGetPackageDependencies(cache, dependencies, warnings, completed, packageName, packageVersion, 'optionalDependencies')
+    endif
 
     # Compute the dependency statistics
     dependenciesDirect = dataFilter(dependencies, 'Dependent == packageName && [Dependent Version] == packageVersion', \

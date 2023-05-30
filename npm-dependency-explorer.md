@@ -11,13 +11,7 @@ async function ndeMain()
     # Variable arguments
     packageName = if(vName != null && stringLength(vName) > 0, vName, null)
     packageVersion = if(vVersion != null && stringLength(vVersion) > 0, vVersion, null)
-    if objectHas(ndeDependencyTypeKeys, vType) then
-        dependencyType = vType
-        dependencyKey = objectGet(ndeDependencyTypeKeys, vType)
-    else then
-        dependencyType = 'Package'
-        dependencyKey = objectGet(ndeDependencyTypeKeys, dependencyType)
-    endif
+    dependencyKey = if(vType == 'Development', 'devDependencies', 'dependencies')
 
     # Load the package version dependency data
     cache = npmCacheNew()
@@ -57,7 +51,7 @@ async function ndeMain()
 
     # Render the package version dependency chart?
     else if vVersionChart then
-        ndeRenderVersionChart(cache, packageName, packageVersion)
+        ndeRenderVersionChart(cache, packageName, packageVersion, dependencyKey)
         return
     endif
 
@@ -65,8 +59,8 @@ async function ndeMain()
     markdownPrint( \
         '', \
         '**Version:** ' + markdownEscape(packageVersion), \
-        '([versions](' + ndeCleanURL(objectNew('name', packageName, 'version', packageVersion, 'versionSelect', 1)) + ') | ', \
-        '[chart](' + ndeCleanURL(objectNew('name', packageName, 'version', packageVersion, 'versionChart', 1)) + '))' \
+        '([versions](' + ndeURL(objectNew('versionSelect', 1)) + ') | ', \
+        '[chart](' + ndeURL(objectNew('versionChart', 1)) + '))' \
     )
 
     # Load all dependencies and compute the dependency statistics
@@ -81,19 +75,17 @@ async function ndeMain()
     endif
 
     # Compute the dependency type links
-    linkPackage = if(dependencyType == 'Package', 'Package', '[Package](' + ndeURL(objectNew('type', '')) + ')')
-    linkDevelopment = if(dependencyType == 'Development', 'Development', '[Development](' + ndeURL(objectNew('type', 'Development')) + ')')
-    linkOptional = if(dependencyType == 'Optional', 'Optional', '[Optional](' + ndeURL(objectNew('type', 'Optional')) + ')')
-    linkPeer = if(dependencyType == 'Peer', 'Peer', '[Peer](' + ndeURL(objectNew('type', 'Peer')) + ')')
+    linkPackage = if(dependencyKey != 'devDependencies', 'Package', '[Package](' + ndeURL(objectNew('type', '')) + ')')
+    linkDevelopment = if(dependencyKey == 'devDependencies', 'Development', '[Development](' + ndeURL(objectNew('type', 'Development')) + ')')
 
     # Render the package dependency stats
-    dependenciesDescriptor = if(dependencyType != 'Package', '*' + stringLower(dependencyType) + '* ', '')
+    dependenciesDescriptor = if(dependencyKey == 'devDependencies', '*Development* ', '')
     markdownPrint( \
         '', \
         '**Direct ' + dependenciesDescriptor + 'dependencies:** ' + objectGet(dependencyStats, 'countDirect') + ' \\', \
         '**Total ' + dependenciesDescriptor + 'dependencies:** ' + objectGet(dependencyStats, 'count'), \
         '', \
-        '**Type:** ' + linkPackage + ' | ' + linkDevelopment + ' | ' + linkOptional + ' | ' + linkPeer \
+        '**Type:** ' + linkPackage + ' | ' + linkDevelopment \
     )
 
     # Render warnings
@@ -129,7 +121,7 @@ async function ndeMain()
         # Render the filter/sort links
         markdownPrint( \
             '', \
-            '### ' + if(dependencyType != 'Package', dependencyType, '') + ' Dependencies', \
+            '### ' + if(dependencyKey == 'devDependencies', 'Development ', '') + 'Dependencies', \
             '', \
             '**Sort:** ' + linkSortName + ' | ' + linkSortDependencies + ' \\', \
             '**Direct:** ' + linkDirectAll + ' | ' + linkDirect + if(hasLatest, ' \\', ''), \
@@ -137,7 +129,7 @@ async function ndeMain()
         )
 
         # Add the dependency count field
-        dataCalculatedField(dependenciesFiltered, 'Dependencies', 'npmPackageDependencyCount(cache, Package, Version)', \
+        dataCalculatedField(dependenciesFiltered, 'Dependencies', 'npmPackageDependencyCount(cache, Package, Version, "dependencies")', \
             objectNew('cache', cache))
 
         # Sort the table data
@@ -209,7 +201,7 @@ endfunction
 function ndeRenderVersionLinks(cache, packageName, packageVersion)
     markdownPrint( \
         '', \
-        '[Back to package](' + ndeCleanURL(objectNew('name', packageName, 'version', packageVersion)) + ')', \
+        '[Back to package](' + ndeURL(objectNew('versionSelect', 0)) + ')', \
         '', \
         '### Versions' \
     )
@@ -218,23 +210,23 @@ function ndeRenderVersionLinks(cache, packageName, packageVersion)
     foreach packageSemver in packageSemvers do
         packageVersion = semverStringify(packageSemver)
         markdownPrint('', '[' + markdownEscape(packageVersion) + '](' + \
-            ndeCleanURL(objectNew('name', packageName, 'version', packageVersion)) + ')' + \
+            ndeURL(objectNew('version', packageVersion, 'versionSelect', 0)) + ')' + \
             if(packageVersion == packageVersionLatest, ' (latest)', ''))
     endforeach
 endfunction
 
 
 # Render the package dependencies by version chart
-async function ndeRenderVersionChart(cache, packageName, packageVersion)
+async function ndeRenderVersionChart(cache, packageName, packageVersion, dependencyKey)
     markdownPrint( \
         '', \
-        '[Back to package](' + ndeCleanURL(objectNew('name', packageName, 'version', packageVersion)) + ')', \
+        '[Back to package](' + ndeURL(objectNew('versionChart', 0)) + ')', \
         '', \
-        '### Version Dependency Chart' \
+        '### ' + if(dependencyKey == 'devDependencies', '*Development* ', '') + 'Dependencies Chart' \
     )
 
     # Load all package version dependencies
-    npmCacheLoadPackageAll(cache, packageName, 'dependencies')
+    npmCacheLoadPackageAll(cache, packageName, dependencyKey)
 
     # Compute the version dependency data table
     versionDependencies = arrayNew()
@@ -242,11 +234,11 @@ async function ndeRenderVersionChart(cache, packageName, packageVersion)
     packageSemverCount = arrayLength(packageSemvers)
     foreach packageSemver, ixSemver in packageSemvers do
         packageVersion = semverStringify(packageSemver)
-        packageVersionURL = ndeCleanURL(objectNew('name', packageName, 'version', packageVersion))
+        packageVersionURL = ndeURL(objectNew('version', packageVersion, 'versionChart', 0))
         arrayPush(versionDependencies, objectNew( \
             'Version Index', packageSemverCount - ixSemver - 1, \
             'Version', '[' + markdownEscape(packageVersion) + '](' + packageVersionURL + ')', \
-            'Dependencies', npmPackageDependencyCount(cache, packageName, packageVersion) \
+            'Dependencies', npmPackageDependencyCount(cache, packageName, packageVersion, dependencyKey) \
         ))
     endforeach
 
@@ -266,15 +258,6 @@ async function ndeRenderVersionChart(cache, packageName, packageVersion)
         'markdown', arrayNew('Version') \
     ))
 endfunction
-
-
-# Map of type argument string to npm package JSON dependency map key
-ndeDependencyTypeKeys = objectNew( \
-    'Development', 'devDependencies', \
-    'Optional', 'optionalDependencies', \
-    'Package', 'dependencies', \
-    'Peer', 'peerDependencies' \
-)
 
 
 # Helper to create application links
