@@ -21,22 +21,22 @@ function semverParse(text, groupSuffix)
 
     # Match the SemVer text
     match = if(stringLength(text) != null, regexMatch(semverRegexSemver, text), text)
-    if match != null then
+    if match != null:
         groups = objectGet(match, 'groups')
-        if groupSuffix == null then
+        if groupSuffix == null:
             groupSuffix = ''
         endif
 
         # Parse the release text
         release = null
         releaseText = objectGet(groups, 'release' + groupSuffix)
-        if releaseText != null then
+        if releaseText != null:
             release = arrayNew()
-            foreach part in stringSplit(releaseText, '.') do
+            for part in stringSplit(releaseText, '.'):
                 # Parse all-digits parts as integers
                 part = if(regexMatch(semverRegexDigits, part) != null, numberParseInt(part), part)
                 arrayPush(release, part)
-            endforeach
+            endfor
         endif
 
         # Return the SemVer object
@@ -87,33 +87,33 @@ function semverCompare(semver, other)
     result = if(semverMajor < otherMajor, -1, if(semverMajor == otherMajor, 0, 1))
 
     # Compare the minor version
-    if !result then
+    if !result:
         semverMinor = objectGet(semver, 'minor')
         otherMinor = objectGet(other, 'minor')
         result = if(semverMinor < otherMinor, -1, if(semverMinor == otherMinor, 0, 1))
     endif
 
     # Compare the patch version
-    if !result then
+    if !result:
         semverPatch = objectGet(semver, 'patch')
         otherPatch = objectGet(other, 'patch')
         result = if(semverPatch < otherPatch, -1, if(semverPatch == otherPatch, 0, 1))
     endif
 
     # Compare the release
-    if !result then
+    if !result:
         semverRelease = objectGet(semver, 'release')
         otherRelease = objectGet(other, 'release')
         result = if(semverRelease != null, if(otherRelease != null, 0, -1), if(otherRelease != null, 1, 0))
     endif
 
     # Compare the release parts
-    if !result then
+    if !result:
         semverReleaseLength = arrayLength(semverRelease)
         otherReleaseLength = arrayLength(otherRelease)
         releaseLength = mathMax(semverReleaseLength, otherReleaseLength)
         ixPart = 0
-        while ixPart < releaseLength do
+        while ixPart < releaseLength:
             semverReleasePart = arrayGet(semverRelease, ixPart)
             otherReleasePart = arrayGet(otherRelease, ixPart)
 
@@ -121,13 +121,13 @@ function semverCompare(semver, other)
             semverPartNumeric = (stringLength(semverReleasePart) == null)
             otherPartNumeric = (stringLength(otherReleasePart) == null)
             result = if(semverPartNumeric && !otherPartNumeric, -1, if(!semverPartNumeric && otherPartNumeric, 1, 0))
-            if result then
+            if result:
                 break
             endif
 
             # Compare the parts
             result = if(semverReleasePart < otherReleasePart, -1, if(semverReleasePart == otherReleasePart, 0, 1))
-            if result then
+            if result:
                 break
             endif
 
@@ -136,16 +136,16 @@ function semverCompare(semver, other)
     endif
 
     # Compare the release parts lengths
-    if !result then
+    if !result:
         result = if(semverReleaseLength < otherReleaseLength, -1, if(semverReleaseLength == otherReleaseLength, 0, 1))
     endif
 
     # Compare the build
-    if !result then
+    if !result:
         semverBuild = objectGet(semver, 'build')
         otherBuild = objectGet(other, 'build')
         result = if(semverBuild != null, if(otherBuild != null, 0, 1), if(otherBuild != null, -1, 0))
-        if !result then
+        if !result:
             result = if(semverBuild < otherBuild, -1, if(semverBuild == otherBuild, 0, 1))
         endif
     endif
@@ -163,15 +163,15 @@ endfunction
 # Parse an array of SemVer text to an array of SemVer objects
 function semverVersions(versions)
     semvers = arrayNew()
-    foreach version in versions do
+    for version in versions:
         semver = semverParse(version)
-        if semver != null then
+        if semver != null:
             objectSet(semver, 'semver', objectCopy(semver))
             arrayPush(semvers, semver)
-        else then
-            debugLog('semver: Unrecognized SemVer "' + version + '"')
+        else:
+            consoleLogDebug('semver: Unrecognized SemVer "' + version + '"')
         endif
-    endforeach
+    endfor
     return arraySort(semvers, semverCompareReversed)
 endfunction
 
@@ -180,15 +180,15 @@ endfunction
 function semverMatch(semvers, range)
     # Compute all matched semvers
     matchedSemvers = arrayNew()
-    foreach rangePart in stringSplit(range, semverRegexRangeSplit) do
+    for rangePart in stringSplit(range, semverRegexRangeSplit):
         partSemvers = semverMatchPart(semvers, rangePart)
-        if partSemvers != null then
+        if partSemvers != null:
             arrayExtend(matchedSemvers, partSemvers)
         endif
-    endforeach
+    endfor
 
     # Compute the best match
-    if arrayLength(matchedSemvers) then
+    if arrayLength(matchedSemvers):
         arraySort(matchedSemvers, semverCompareReversed)
         return semverStringify(arrayGet(matchedSemvers, 0))
     endif
@@ -201,19 +201,19 @@ endfunction
 function semverMatchPart(semvers, range)
     # Empty range?
     range = stringTrim(range)
-    if range == '' then
+    if range == '':
         return dataFilter(semvers, "objectGet(semver, 'release') == null")
     endif
 
     # Tilde range
     matchTilde = regexMatch(semverRegexTilde, range)
-    if matchTilde != null then
+    if matchTilde != null:
         lower = semverParse(matchTilde)
         groups = objectGet(matchTilde, 'groups')
         lowerHasMinor = regexTest(semverRegexDigits, objectGet(groups, 'minor'))
-        if lowerHasMinor then
+        if lowerHasMinor:
             upper = semverNew(objectGet(lower, 'major'), objectGet(lower, 'minor') + 1, 0)
-        else then
+        else:
             upper = semverNew(objectGet(lower, 'major') + 1, 0, 0)
         endif
         return semverMatchPartFilter(semvers, lower, upper)
@@ -221,7 +221,7 @@ function semverMatchPart(semvers, range)
 
     # Carrot range
     matchCarrot = regexMatch(semverRegexCarrot, range)
-    if matchCarrot != null then
+    if matchCarrot != null:
         groups = objectGet(matchCarrot, 'groups')
         lower = semverParse(matchCarrot)
         major = objectGet(lower, 'major')
@@ -237,7 +237,7 @@ function semverMatchPart(semvers, range)
 
     # Hypen range
     matchHyphen = regexMatch(semverRegexHyphen, range)
-    if matchHyphen != null then
+    if matchHyphen != null:
         lower = semverParse(matchHyphen)
         upper = semverParse(matchHyphen, '2')
         groups = objectGet(matchHyphen, 'groups')
@@ -249,7 +249,7 @@ function semverMatchPart(semvers, range)
     filtered = semvers
     rangeParts = range
     matchRangePart = regexMatch(semverRegexRangePart, rangeParts)
-    while matchRangePart != null do
+    while matchRangePart != null:
         groups = objectGet(matchRangePart, 'groups')
         rangeOp = objectGet(groups, 'op')
         rangeValue = semverParse(matchRangePart)
@@ -258,24 +258,24 @@ function semverMatchPart(semvers, range)
         rangeValueHasPatch = regexTest(semverRegexDigits, objectGet(groups, 'patch'))
 
         # '*'?
-        if (rangeOp == '' || rangeOp == '=') && !rangeValueHasMajor then
+        if (rangeOp == '' || rangeOp == '=') && !rangeValueHasMajor:
             filtered = dataFilter(filtered, "objectGet(semver, 'release') == null")
 
         # Specific-version?
-        else if rangeOp == '=' || (rangeOp == '' && rangeValueHasPatch) then
+        elif rangeOp == '=' || (rangeOp == '' && rangeValueHasPatch):
             filtered = dataFilter(filtered, 'semverCompare(semver, rangeValue) == 0', objectNew('rangeValue', rangeValue))
 
         # X-range?
-        else if rangeOp == '' then
-            if rangeValueHasMinor then
+        elif rangeOp == '':
+            if rangeValueHasMinor:
                 upper = semverNew(objectGet(rangeValue, 'major'), objectGet(rangeValue, 'minor') + 1, 0)
-            else then
+            else:
                 upper = semverNew(objectGet(rangeValue, 'major') + 1, 0, 0, '0')
             endif
             filtered = semverMatchPartFilter(filtered, lower, upper)
 
         # ">", ">=", "<", "<="
-        else then
+        else:
             filtered = dataFilter( \
                 filtered, \
                 "objectGet(semver, 'release') == null && semverCompare(semver, rangeValue) " + rangeOp + ' 0', \
@@ -288,7 +288,7 @@ function semverMatchPart(semvers, range)
     endwhile
 
     # Syntax error?
-    if rangeParts != '' then
+    if rangeParts != '':
         return null
     endif
 
@@ -299,9 +299,9 @@ endfunction
 # Helper to filter a lower-upper semver range
 function semverMatchPartFilter(semvers, lower, upper, upperInclusive)
     # Filter pre-release versions
-    if objectGet(lower, 'release') == null then
+    if objectGet(lower, 'release') == null:
         filtered = dataFilter(semvers, "objectGet(semver, 'release') == null")
-    else then
+    else:
         filtered = dataFilter( \
             semvers, \
             "objectGet(semver, 'release') == null || (major == lowerMajor && minor == lowerMinor && patch == lowerPatch)", \

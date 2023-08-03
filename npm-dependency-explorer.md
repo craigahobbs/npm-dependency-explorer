@@ -2,7 +2,7 @@
 # Licensed under the MIT License
 # https://github.com/craigahobbs/npm-dependency-explorer/blob/main/LICENSE
 
-include 'https://craigahobbs.github.io/markdown-up/include/forms.mds'
+include <forms.mds>
 include 'npm.mds'
 
 
@@ -15,7 +15,7 @@ async function ndeMain()
 
     # Load the package version dependency data
     cache = npmCacheNew()
-    if packageName != null then
+    if packageName != null:
         packageVersion = npmCacheLoadPackage(cache, packageName, packageVersion, dependencyKey)
     endif
     packageData = npmCacheGetPackage(cache, packageName)
@@ -28,10 +28,10 @@ async function ndeMain()
     # Render the title
     title = 'npm Dependency Explorer'
     markdownPrint('', '# ' + markdownEscape(title))
-    setDocumentTitle(title + if(packageJSON != null, ' - ' + packageName, ''))
+    documentSetTitle(title + if(packageJSON != null, ' - ' + packageName, ''))
 
     # If no package is loaded, render the package selection form
-    if packageJSON == null then
+    if packageJSON == null:
         ndeRenderForm(cache, packageName, packageVersion)
         return
     endif
@@ -45,12 +45,12 @@ async function ndeMain()
     )
 
     # Render the package version selection links?
-    if vVersionSelect then
+    if vVersionSelect:
         ndeRenderVersionLinks(cache, packageName, packageVersion)
         return
 
     # Render the package version dependency chart?
-    else if vVersionChart then
+    elif vVersionChart:
         ndeRenderVersionChart(cache, packageName, packageVersion, dependencyKey)
         return
     endif
@@ -70,7 +70,7 @@ async function ndeMain()
 
     # Filter to dependencies that have a newer version?
     hasLatest = arrayLength(dataFilter(dependenciesFiltered, "Latest != ''")) > 0
-    if hasLatest && vLatest then
+    if hasLatest && vLatest:
         dependenciesFiltered = dataFilter(dependenciesFiltered, "Latest != ''")
     endif
 
@@ -89,7 +89,7 @@ async function ndeMain()
     )
 
     # Render warnings
-    if arrayLength(warnings) then
+    if arrayLength(warnings):
         markdownPrint( \
             '', \
             '### Warnings', \
@@ -97,15 +97,15 @@ async function ndeMain()
             'There are ' + arrayLength(warnings) + ' warnings.' + stringFromCharCode(160), \
             '[' + if(vWarn, 'Hide', 'Show') + '](' + ndeURL(objectNew('warn', !vWarn)) + ')' \
         )
-        if vWarn then
-            foreach warning in warnings do
+        if vWarn:
+            for warning in warnings:
                 markdownPrint('', '- ' + markdownEscape(warning))
-            endforeach
+            endfor
         endif
     endif
 
     # Render the dependency table
-    if arrayLength(dependenciesFiltered) then
+    if arrayLength(dependenciesFiltered):
         # Compute the sort links
         linkSortName = if(vSort != 'Dependencies', 'Name', '[Name](' + ndeURL(objectNew('sort', '')) + ')')
         linkSortDependencies = if(vSort == 'Dependencies', 'Dependencies', '[Dependencies](' + ndeURL(objectNew('sort', 'Dependencies')) + ')')
@@ -134,7 +134,7 @@ async function ndeMain()
 
         # Sort the table data
         sortFields = arrayNew(arrayNew('Package'), arrayNew('Version'), arrayNew('Dependent'), arrayNew('Dependent Version'))
-        if vSort == 'Dependencies' then
+        if vSort == 'Dependencies':
             sortFields = arrayExtend(arrayNew(arrayNew('Dependencies', 1)), sortFields)
         endif
         dataSort(dependenciesFiltered, sortFields)
@@ -166,14 +166,14 @@ function ndeRenderForm(cache, packageName, packageVersion)
         objectNew('html', 'p', 'elem', formsTextElements('package-name-text', packageName, 32, ndePackageNameOnClick)), \
         objectNew('html', 'p', 'elem', formsLinkButtonElements('Explore Dependencies', ndePackageNameOnClick)) \
     ))
-    setDocumentFocus('package-name-text')
+    documentSetFocus('package-name-text')
 
     # Render error messages
-    if packageName != null then
+    if packageName != null:
         packageData = npmCacheGetPackage(cache, packageName)
-        if packageData == null then
+        if packageData == null:
             markdownPrint('', '**Error:** Unknown package "' + markdownEscape(packageName) + '"')
-        else if packageVersion != null && npmPackageJSON(packageData, packageVersion) == null then
+        elif packageVersion != null && npmPackageJSON(packageData, packageVersion) == null:
             markdownPrint('', '**Error:** Unknown version "' + markdownEscape(packageVersion) + '" of package "' + \
                 markdownEscape(packageName) + '"')
         endif
@@ -181,19 +181,19 @@ function ndeRenderForm(cache, packageName, packageVersion)
 
     # Render example packages
     markdownPrint('', '## Examples')
-    foreach exampleName in arraySort(arrayNew( \
+    for exampleName in arraySort(arrayNew( \
         'c8', 'eslint', 'jsdoc', 'jsdom', 'npm', \
         'calc-script', 'element-model', 'markdown-model', 'markdown-up', 'schema-markdown' \
-    )) do
-        markdownPrint('', '[' + markdownEscape(exampleName) + "](#var.vName='" + encodeURIComponent(exampleName) + "')")
-    endforeach
+    )):
+        markdownPrint('', '[' + markdownEscape(exampleName) + "](#var.vName='" + urlEncodeComponent(exampleName) + "')")
+    endfor
 endfunction
 
 
 # Package name button on-click handler
 function ndePackageNameOnClick()
-    packageName = stringTrim(getDocumentInputValue('package-name-text'))
-    setWindowLocation(ndeCleanURL(objectNew('name', packageName)))
+    packageName = stringTrim(documentInputValue('package-name-text'))
+    windowSetLocation(ndeCleanURL(objectNew('name', packageName)))
 endfunction
 
 
@@ -207,12 +207,12 @@ function ndeRenderVersionLinks(cache, packageName, packageVersion)
     )
     packageSemvers = npmCacheGetPackageVersions(cache, packageName)
     packageVersionLatest = npmPackageVersionLatest(npmCacheGetPackage(cache, packageName))
-    foreach packageSemver in packageSemvers do
+    for packageSemver in packageSemvers:
         packageVersion = semverStringify(packageSemver)
         markdownPrint('', '[' + markdownEscape(packageVersion) + '](' + \
             ndeURL(objectNew('version', packageVersion, 'versionSelect', 0)) + ')' + \
             if(packageVersion == packageVersionLatest, ' (latest)', ''))
-    endforeach
+    endfor
 endfunction
 
 
@@ -232,7 +232,7 @@ async function ndeRenderVersionChart(cache, packageName, packageVersion, depende
     versionDependencies = arrayNew()
     packageSemvers = npmCacheGetPackageVersions(cache, packageName)
     packageSemverCount = arrayLength(packageSemvers)
-    foreach packageSemver, ixSemver in packageSemvers do
+    for packageSemver, ixSemver in packageSemvers:
         packageVersion = semverStringify(packageSemver)
         packageVersionURL = ndeURL(objectNew('version', packageVersion, 'versionChart', 0))
         arrayPush(versionDependencies, objectNew( \
@@ -240,7 +240,7 @@ async function ndeRenderVersionChart(cache, packageName, packageVersion, depende
             'Version', '[' + markdownEscape(packageVersion) + '](' + packageVersionURL + ')', \
             'Dependencies', npmPackageDependencyCount(cache, packageName, packageVersion, dependencyKey) \
         ))
-    endforeach
+    endfor
 
     # Render the version dependency data as a line chart and as a table
     dataLineChart(versionDependencies, objectNew( \
@@ -292,10 +292,10 @@ function ndeURL(args)
     parts = arrayNew()
     if(direct != null && direct, arrayPush(parts, 'var.vDirect=1'))
     if(latest != null && latest, arrayPush(parts, 'var.vLatest=1'))
-    if(name != null, arrayPush(parts, "var.vName='" + encodeURIComponent(name) + "'"))
-    if(sort != null, arrayPush(parts, "var.vSort='" + encodeURIComponent(sort) + "'"))
-    if(type != null, arrayPush(parts, "var.vType='" + encodeURIComponent(type) + "'"))
-    if(version != null, arrayPush(parts, "var.vVersion='" + encodeURIComponent(version) + "'"))
+    if(name != null, arrayPush(parts, "var.vName='" + urlEncodeComponent(name) + "'"))
+    if(sort != null, arrayPush(parts, "var.vSort='" + urlEncodeComponent(sort) + "'"))
+    if(type != null, arrayPush(parts, "var.vType='" + urlEncodeComponent(type) + "'"))
+    if(version != null, arrayPush(parts, "var.vVersion='" + urlEncodeComponent(version) + "'"))
     if(versionChart != null && versionChart, arrayPush(parts, 'var.vVersionChart=1'))
     if(versionSelect != null && versionSelect, arrayPush(parts, 'var.vVersionSelect=1'))
     if(warn != null && warn, arrayPush(parts, 'var.vWarn=1'))
