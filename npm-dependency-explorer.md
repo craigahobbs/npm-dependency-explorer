@@ -183,7 +183,7 @@ function ndeRenderForm(cache, packageName, packageVersion)
     markdownPrint('', '## Examples')
     for exampleName in arraySort(arrayNew( \
         'c8', 'eslint', 'jsdoc', 'jsdom', 'npm', \
-        'calc-script', 'element-model', 'markdown-model', 'markdown-up', 'schema-markdown' \
+        'bare-script', 'element-model', 'markdown-model', 'markdown-up', 'schema-markdown' \
     )):
         markdownPrint('', '[' + markdownEscape(exampleName) + "](#var.vName='" + urlEncodeComponent(exampleName) + "')")
     endfor
