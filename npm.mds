@@ -60,7 +60,7 @@ function npmCacheGetPackageVersion(cache, packageName, packageRange)
         packageVersion = semverMatch(npmCacheGetPackageVersions(cache, packageName), packageRange)
         if packageVersion == null:
             packageVersion = npmPackageVersionLatest(npmCacheGetPackage(cache, packageName))
-            consoleLogDebug('npm: Un-matched SemVer range "' + packageRange + '" for package "' + packageName + '"' + \
+            systemLogDebug('npm: Un-matched SemVer range "' + packageRange + '" for package "' + packageName + '"' + \
                 ', using "' + packageVersion + '" (latest)')
         endif
         objectSet(packageRanges, packageRange, packageVersion)
@@ -76,7 +76,7 @@ async function npmCacheLoadPackage(cache, packageName, packageVersion, dependenc
     if objectHas(cachePackages, packageName):
         packageData = objectGet(cachePackages, packageName)
     else:
-        packageData = httpFetch(npmPackageURL(packageName))
+        packageData = systemFetch(npmPackageURL(packageName))
         npmCacheAddPackage(cache, packageName, packageData)
     endif
 
@@ -104,7 +104,7 @@ async function npmCacheLoadPackageAll(cache, packageName, dependencyKey)
     if objectHas(cachePackages, packageName):
         packageData = objectGet(cachePackages, packageName)
     else:
-        packageData = httpFetch(npmPackageURL(packageName))
+        packageData = systemFetch(npmPackageURL(packageName))
         npmCacheAddPackage(cache, packageName, packageData)
     endif
 
@@ -174,7 +174,7 @@ async function npmCacheLoadPackageJSONs(cache, packageJSONs, dependencyKey)
     endfor
 
     # Fetch the unloaded depedency data URLs and add to the cache
-    for dependencyData, ixDependencyData in httpFetch(unloadedURLs):
+    for dependencyData, ixDependencyData in systemFetch(unloadedURLs):
         npmCacheAddPackage(cache, arrayGet(unloadedNames, ixDependencyData), dependencyData)
     endfor
 

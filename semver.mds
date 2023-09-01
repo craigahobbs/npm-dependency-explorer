@@ -169,7 +169,7 @@ function semverVersions(versions)
             objectSet(semver, 'semver', objectCopy(semver))
             arrayPush(semvers, semver)
         else:
-            consoleLogDebug('semver: Unrecognized SemVer "' + version + '"')
+            systemLogDebug('semver: Unrecognized SemVer "' + version + '"')
         endif
     endfor
     return arraySort(semvers, semverCompareReversed)
