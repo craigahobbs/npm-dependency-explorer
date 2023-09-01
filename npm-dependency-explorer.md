@@ -152,7 +152,10 @@ async function ndeMain()
                 arrayNew('Latest', 'Range', 'Dependent', 'Dependent Version', 'Dependencies'), \
                 arrayNew('Range', 'Dependent', 'Dependent Version', 'Dependencies') \
             ), \
-            'markdown', arrayNew('Package', 'Dependent') \
+            'formats', objectNew( \
+                'Package', objectNew('markdown', true), \
+                'Dependent', objectNew('markdown', true) \
+            ) \
         ))
     endif
 endfunction
@@ -255,7 +258,9 @@ async function ndeRenderVersionChart(cache, packageName, packageVersion, depende
     dataSort(versionDependencies, arrayNew(arrayNew('Version Index', 1)))
     dataTable(versionDependencies, objectNew( \
         'fields', arrayNew('Version Index', 'Version', 'Dependencies'), \
-        'markdown', arrayNew('Version') \
+        'formats', objectNew( \
+            'Version', objectNew('markdown', true) \
+        ) \
     ))
 endfunction
 
