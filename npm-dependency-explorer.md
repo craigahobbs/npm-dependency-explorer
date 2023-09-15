@@ -7,7 +7,7 @@ include 'npm.mds'
 
 
 # The npm Dependency Explorer main entry point
-async function ndeMain()
+async function ndeMain():
     # Variable arguments
     packageName = if(vName != null && stringLength(vName) > 0, vName, null)
     packageVersion = if(vVersion != null && stringLength(vVersion) > 0, vVersion, null)
@@ -162,7 +162,7 @@ endfunction
 
 
 # Render the package selection form
-function ndeRenderForm(cache, packageName, packageVersion)
+function ndeRenderForm(cache, packageName, packageVersion):
     # Render the search form
     elementModelRender(arrayNew( \
         objectNew('html', 'p', 'elem', objectNew('html', 'b', 'elem', objectNew('text', 'Package Name:'))), \
@@ -194,14 +194,14 @@ endfunction
 
 
 # Package name button on-click handler
-function ndePackageNameOnClick()
+function ndePackageNameOnClick():
     packageName = stringTrim(documentInputValue('package-name-text'))
     windowSetLocation(ndeCleanURL(objectNew('name', packageName)))
 endfunction
 
 
 # Render the package version links
-function ndeRenderVersionLinks(cache, packageName, packageVersion)
+function ndeRenderVersionLinks(cache, packageName, packageVersion):
     markdownPrint( \
         '', \
         '[Back to package](' + ndeURL(objectNew('versionSelect', 0)) + ')', \
@@ -220,7 +220,7 @@ endfunction
 
 
 # Render the package dependencies by version chart
-async function ndeRenderVersionChart(cache, packageName, packageVersion, dependencyKey)
+async function ndeRenderVersionChart(cache, packageName, packageVersion, dependencyKey):
     markdownPrint( \
         '', \
         '[Back to package](' + ndeURL(objectNew('versionChart', 0)) + ')', \
@@ -266,7 +266,7 @@ endfunction
 
 
 # Helper to create application links
-function ndeURL(args)
+function ndeURL(args):
     # Arguments overrides
     name = objectGet(args, 'name')
     version = objectGet(args, 'version')
@@ -309,7 +309,7 @@ endfunction
 
 
 # Helper to create package/version application links
-function ndeCleanURL(args)
+function ndeCleanURL(args):
     argsClean = objectNew( \
         'name', '', \
         'version', '', \

@@ -5,31 +5,31 @@ include 'semver.mds'
 
 
 # Create an npm package page URL
-function npmPackagePageURL(packageName)
+function npmPackagePageURL(packageName):
     return 'https://www.npmjs.com/package/' + urlEncodeComponent(packageName)
 endfunction
 
 
 # Create an npm package data URL
-function npmPackageURL(packageName)
+function npmPackageURL(packageName):
     return 'https://registry.npmjs.org/' + urlEncodeComponent(packageName)
 endfunction
 
 
 # Get a package version's JSON
-function npmPackageJSON(packageData, packageVersion)
+function npmPackageJSON(packageData, packageVersion):
     return objectGet(objectGet(packageData, 'versions'), packageVersion)
 endfunction
 
 
 # Get a package's latest version
-function npmPackageVersionLatest(packageData)
+function npmPackageVersionLatest(packageData):
     return objectGet(objectGet(packageData, 'dist-tags'), 'latest')
 endfunction
 
 
 # Initialize the package data cache
-function npmCacheNew()
+function npmCacheNew():
     return objectNew( \
         'packages', objectNew(), \
         'versions', objectNew(), \
@@ -39,19 +39,19 @@ endfunction
 
 
 # Get package data from the cache
-function npmCacheGetPackage(cache, packageName)
+function npmCacheGetPackage(cache, packageName):
     return objectGet(objectGet(cache, 'packages'), packageName)
 endfunction
 
 
 # Get package versions from the cache
-function npmCacheGetPackageVersions(cache, packageName)
+function npmCacheGetPackageVersions(cache, packageName):
     return objectGet(objectGet(cache, 'versions'), packageName)
 endfunction
 
 
 # Get a package version from a semver range
-function npmCacheGetPackageVersion(cache, packageName, packageRange)
+function npmCacheGetPackageVersion(cache, packageName, packageRange):
     # Get the semver range version
     packageRanges = objectGet(objectGet(cache, 'ranges'), packageName)
     if objectHas(packageRanges, packageRange):
@@ -70,7 +70,7 @@ endfunction
 
 
 # Load a package version and its dependencies into the cache - returns the package version
-async function npmCacheLoadPackage(cache, packageName, packageVersion, dependencyKey)
+async function npmCacheLoadPackage(cache, packageName, packageVersion, dependencyKey):
     # Load the package data
     cachePackages = objectGet(cache, 'packages')
     if objectHas(cachePackages, packageName):
@@ -98,7 +98,7 @@ endfunction
 
 
 # Load a package version and its dependencies into the cache
-async function npmCacheLoadPackageAll(cache, packageName, dependencyKey)
+async function npmCacheLoadPackageAll(cache, packageName, dependencyKey):
     # Load the package data
     cachePackages = objectGet(cache, 'packages')
     if objectHas(cachePackages, packageName):
@@ -123,7 +123,7 @@ endfunction
 
 
 # Add package data to the cache
-function npmCacheAddPackage(cache, packageName, packageData)
+function npmCacheAddPackage(cache, packageName, packageData):
     # Add the package data to the cache
     objectSet(objectGet(cache, 'packages'), packageName, packageData)
 
@@ -138,7 +138,7 @@ endfunction
 
 
 # Recursively load a package's data
-async function npmCacheLoadPackageJSONs(cache, packageJSONs, dependencyKey)
+async function npmCacheLoadPackageJSONs(cache, packageJSONs, dependencyKey):
     cachePackages = objectGet(cache, 'packages')
     cacheRanges = objectGet(cache, 'ranges')
 
@@ -210,7 +210,7 @@ endfunction
 
 
 # Compute an npm package's dependency data table
-function npmCacheGetPackageDependencies(cache, dependencies, warnings, completed, packageName, packageVersion, dependencyKey)
+function npmCacheGetPackageDependencies(cache, dependencies, warnings, completed, packageName, packageVersion, dependencyKey):
     # Package and version already loaded?
     if !objectHas(completed, packageName):
         objectSet(completed, packageName, objectNew())
@@ -259,7 +259,7 @@ endfunction
 
 
 # Get a package's total dependency count
-function npmPackageDependencyCount(cache, packageName, packageVersion, dependencyKey)
+function npmPackageDependencyCount(cache, packageName, packageVersion, dependencyKey):
     dependencies = arrayNew()
     warnings = arrayNew()
     completed = objectNew()
@@ -275,7 +275,7 @@ endfunction
 
 
 # Compute a package's total and direct dependencies with warnings
-function npmPackageStats(cache, packageName, packageVersion, dependencyKey)
+function npmPackageStats(cache, packageName, packageVersion, dependencyKey):
     # Get the package dependencies
     dependencies = arrayNew()
     warnings = arrayNew()

@@ -3,7 +3,7 @@
 
 
 # Create a new SemVer object
-function semverNew(major, minor, patch, release)
+function semverNew(major, minor, patch, release):
     semver = objectNew( \
         'major', major, \
         'minor', minor, \
@@ -16,7 +16,7 @@ endfunction
 
 
 # Parse SemVer text to a SemVer object
-function semverParse(text, groupSuffix)
+function semverParse(text, groupSuffix):
     semver = null
 
     # Match the SemVer text
@@ -66,7 +66,7 @@ semverRegexDigits = regexNew('^\d+$')
 
 
 # Stringify a SemVer object
-function semverStringify(semver)
+function semverStringify(semver):
     release = objectGet(semver, 'release')
     build = objectGet(semver, 'build')
     return arrayJoin(arrayNew( \
@@ -80,7 +80,7 @@ endfunction
 
 
 # SemVer sort comparison func
-function semverCompare(semver, other)
+function semverCompare(semver, other):
     # Compare the major version
     semverMajor = objectGet(semver, 'major')
     otherMajor = objectGet(other, 'major')
@@ -155,13 +155,13 @@ endfunction
 
 
 # SemVer reverse-sort comparison func
-function semverCompareReversed(semver, other)
+function semverCompareReversed(semver, other):
     return -semverCompare(semver, other)
 endfunction
 
 
 # Parse an array of SemVer text to an array of SemVer objects
-function semverVersions(versions)
+function semverVersions(versions):
     semvers = arrayNew()
     for version in versions:
         semver = semverParse(version)
@@ -177,7 +177,7 @@ endfunction
 
 
 # Match a SemVer range
-function semverMatch(semvers, range)
+function semverMatch(semvers, range):
     # Compute all matched semvers
     matchedSemvers = arrayNew()
     for rangePart in stringSplit(range, semverRegexRangeSplit):
@@ -198,7 +198,7 @@ endfunction
 
 
 # Match a SemVer range part
-function semverMatchPart(semvers, range)
+function semverMatchPart(semvers, range):
     # Empty range?
     range = stringTrim(range)
     if range == '':
@@ -297,7 +297,7 @@ endfunction
 
 
 # Helper to filter a lower-upper semver range
-function semverMatchPartFilter(semvers, lower, upper, upperInclusive)
+function semverMatchPartFilter(semvers, lower, upper, upperInclusive):
     # Filter pre-release versions
     if objectGet(lower, 'release') == null:
         filtered = dataFilter(semvers, "objectGet(semver, 'release') == null")
