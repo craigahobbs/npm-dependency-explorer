@@ -166,7 +166,7 @@ function ndeRenderForm(cache, packageName, packageVersion):
     # Render the search form
     elementModelRender(arrayNew( \
         objectNew('html', 'p', 'elem', objectNew('html', 'b', 'elem', objectNew('text', 'Package Name:'))), \
-        objectNew('html', 'p', 'elem', formsTextElements('package-name-text', packageName, 32, ndePackageNameOnClick)), \
+        objectNew('html', 'p', 'elem', formsTextElements('package-name-text', packageName, 30, ndePackageNameOnClick)), \
         objectNew('html', 'p', 'elem', formsLinkButtonElements('Explore Dependencies', ndePackageNameOnClick)) \
     ))
     documentSetFocus('package-name-text')
