@@ -9,13 +9,6 @@ NODE_IMAGE ?= node:current-slim
 NODE_DOCKER := $(if $(NO_DOCKER),,docker run -i --rm -u `id -u`:`id -g` -v `pwd`:`pwd` -w `pwd` -e HOME=`pwd`/build $(NODE_IMAGE))
 
 
-build/npm.build:
-	echo '{"type":"module","devDependencies":{"bare-script":"*"}}' > package.json
-	$(NODE_DOCKER) npm install
-	mkdir -p $(dir $@)
-	touch $@
-
-
 .PHONY: help
 help:
 	@echo "usage: make [clean|commit|gh-pages|test|superclean]"
@@ -44,3 +37,10 @@ commit: test
 
 .PHONY: gh-pages
 gh-pages:
+
+
+build/npm.build:
+	echo '{"type":"module","devDependencies":{"bare-script":"*"}}' > package.json
+	$(NODE_DOCKER) npm install
+	mkdir -p $(dir $@)
+	touch $@
