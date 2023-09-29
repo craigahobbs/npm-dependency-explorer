@@ -28,6 +28,7 @@ endif
 
 .PHONY: test
 test: build/npm.build
+	$(NODE_DOCKER) npx bare -s *.mds tests/*.mds
 	$(NODE_DOCKER) npx bare -c 'include <markdownUp.bare>' tests/runTests.mds
 
 
