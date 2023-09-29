@@ -1,0 +1,10 @@
+# Licensed under the MIT License
+# https://github.com/craigahobbs/npm-dependency-explorer/blob/main/LICENSE
+
+include <unittest.mds>
+
+# Test includes
+include 'testSemver.mds'
+
+# Test report
+return unittestReport()
