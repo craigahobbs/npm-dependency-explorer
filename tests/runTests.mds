@@ -3,6 +3,12 @@
 
 include <unittest.mds>
 
+
+# Set the Title
+title = 'npm Dependency Explorer Tests'
+documentSetTitle(title)
+markdownPrint('# ' + markdownEscape(title))
+
 # Test includes
 include 'testSemver.mds'
 
