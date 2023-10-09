@@ -5,7 +5,7 @@ include '../semver.mds'
 
 
 function testSemverParse():
-    unittestDeepEquals( \
+    unittestDeepEqual( \
         semverParse('1.2.3-beta.1+1234'), \
         jsonParse('{"build": "1234", "major": 1, "minor": 2, "patch": 3, "release": ["beta",1]}') \
     )
@@ -14,7 +14,7 @@ unittestRunTest('testSemverParse')
 
 
 function testSemverStringify():
-    unittestDeepEquals( \
+    unittestDeepEqual( \
         semverStringify(semverParse('1.2.3-beta.1+1234')), \
         '1.2.3-beta.1+1234' \
     )
@@ -25,10 +25,10 @@ unittestRunTest('testSemverStringify')
 function testSemverCompare_release():
     semver = semverParse('1.2.3-beta.1+1234')
     other = semverParse('1.2.2-rc.2+1235')
-    unittestEquals(semverCompare(semver, other), 1)
-    unittestEquals(semverCompare(other, semver), -1)
-    unittestEquals(semverCompare(semver, semver), 0)
-    unittestEquals(semverCompare(other, other), 0)
+    unittestEqual(semverCompare(semver, other), 1)
+    unittestEqual(semverCompare(other, semver), -1)
+    unittestEqual(semverCompare(semver, semver), 0)
+    unittestEqual(semverCompare(other, other), 0)
 endfunction
 unittestRunTest('testSemverCompare_release')
 
@@ -36,10 +36,10 @@ unittestRunTest('testSemverCompare_release')
 function testSemverCompare_releaseSame():
     semver = semverParse('1.2.3-beta.1+1234')
     other = semverParse('1.2.3-beta.2+1235')
-    unittestEquals(semverCompare(semver, other), -1)
-    unittestEquals(semverCompare(other, semver), 1)
-    unittestEquals(semverCompare(semver, semver), 0)
-    unittestEquals(semverCompare(other, other), 0)
+    unittestEqual(semverCompare(semver, other), -1)
+    unittestEqual(semverCompare(other, semver), 1)
+    unittestEqual(semverCompare(semver, semver), 0)
+    unittestEqual(semverCompare(other, other), 0)
 endfunction
 unittestRunTest('testSemverCompare_releaseSame')
 
@@ -47,7 +47,7 @@ unittestRunTest('testSemverCompare_releaseSame')
 function testSemverVersions():
     versions = semverVersions(arrayNew('1.2.2', '1.2.2-rc.2+1235'))
     dataCalculatedField(versions, 'semver', 'semver != null')
-    unittestDeepEquals( \
+    unittestDeepEqual( \
         versions, \
         arrayNew( \
             jsonParse('{"build": null, "major": 1, "minor": 2, "patch": 2, "release": null, "semver": true}'), \
@@ -69,7 +69,7 @@ function testSemverMatch_parts():
     ):
         range = arrayGet(rangeVersion, 0)
         version = arrayGet(rangeVersion, 1)
-        unittestEquals(semverMatch(versions, range), version, jsonStringify(range))
+        unittestEqual(semverMatch(versions, range), version, jsonStringify(range))
     endfor
 endfunction
 unittestRunTest('testSemverMatch_parts')
@@ -93,7 +93,7 @@ function testSemverMatch_tilde():
     ):
         range = arrayGet(rangeVersion, 0)
         version = arrayGet(rangeVersion, 1)
-        unittestEquals(semverMatch(versions, range), version, jsonStringify(range))
+        unittestEqual(semverMatch(versions, range), version, jsonStringify(range))
     endfor
 endfunction
 unittestRunTest('testSemverMatch_tilde')
@@ -127,7 +127,7 @@ function testSemverMatch_carrot():
     ):
         range = arrayGet(rangeVersion, 0)
         version = arrayGet(rangeVersion, 1)
-        unittestEquals(semverMatch(versions, range), version, jsonStringify(range))
+        unittestEqual(semverMatch(versions, range), version, jsonStringify(range))
     endfor
 endfunction
 unittestRunTest('testSemverMatch_carrot')
@@ -156,7 +156,7 @@ function testSemverMatch_hyphen():
     ):
         range = arrayGet(rangeVersion, 0)
         version = arrayGet(rangeVersion, 1)
-        unittestEquals(semverMatch(versions, range), version, jsonStringify(range))
+        unittestEqual(semverMatch(versions, range), version, jsonStringify(range))
     endfor
 endfunction
 unittestRunTest('testSemverMatch_hyphen')
@@ -185,7 +185,7 @@ function testSemverMatch_range():
     ):
         range = arrayGet(rangeVersion, 0)
         version = arrayGet(rangeVersion, 1)
-        unittestEquals(semverMatch(versions, range), version, jsonStringify(range))
+        unittestEqual(semverMatch(versions, range), version, jsonStringify(range))
     endfor
 endfunction
 unittestRunTest('testSemverMatch_range')
@@ -209,7 +209,7 @@ function testSemverMatch_xRange():
     ):
         range = arrayGet(rangeVersion, 0)
         version = arrayGet(rangeVersion, 1)
-        unittestEquals(semverMatch(versions, range), version, jsonStringify(range))
+        unittestEqual(semverMatch(versions, range), version, jsonStringify(range))
     endfor
 endfunction
 unittestRunTest('testSemverMatch_xRange')
@@ -232,7 +232,7 @@ function testSemverMatch_space():
     ):
         range = arrayGet(rangeVersion, 0)
         version = arrayGet(rangeVersion, 1)
-        unittestEquals(semverMatch(versions, range), version, jsonStringify(range))
+        unittestEqual(semverMatch(versions, range), version, jsonStringify(range))
     endfor
 endfunction
 unittestRunTest('testSemverMatch_space')
