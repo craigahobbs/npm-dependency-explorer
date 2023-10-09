@@ -14,7 +14,7 @@ unittestRunTest('testSemverParse')
 
 
 function testSemverStringify():
-    unittestDeepEqual( \
+    unittestEqual( \
         semverStringify(semverParse('1.2.3-beta.1+1234')), \
         '1.2.3-beta.1+1234' \
     )
