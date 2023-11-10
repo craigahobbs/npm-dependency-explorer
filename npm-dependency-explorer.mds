@@ -1,16 +1,23 @@
 # Licensed under the MIT License
 # https://github.com/craigahobbs/npm-dependency-explorer/blob/main/LICENSE
 
+include <args.mds>
 include <forms.mds>
 include 'npm.mds'
 
 
 # The npm Dependency Explorer main entry point
 async function ndeMain():
-    # Variable arguments
-    packageName = if(vName != null && stringLength(vName) > 0, vName, null)
-    packageVersion = if(vVersion != null && stringLength(vVersion) > 0, vVersion, null)
-    dependencyKey = if(vType == 'Development', 'devDependencies', 'dependencies')
+    # Parse arguments
+    args = argsParse(ndeArguments)
+    packageName = objectGet(args, 'name')
+    packageVersion = objectGet(args, 'version')
+    showDev = objectGet(args, 'dev')
+    showWarnings = objectGet(args, 'warn')
+    filterDirect = objectGet(args, 'direct')
+    filterLatest = objectGet(args, 'latest')
+    sortDependencies = objectGet(args, 'sort')
+    dependencyKey = if(showDev, 'devDependencies', 'dependencies')
 
     # Load the package version dependency data
     cache = npmCacheNew()
@@ -21,8 +28,7 @@ async function ndeMain():
     packageJSON = if(packageData != null, npmPackageJSON(packageData, packageVersion))
 
     # Render the menu
-    currentURL = ndeURL(objectNew())
-    markdownPrint(if(currentURL != '#var=', '[Home](#var=)', 'Home') + ' | [About](#url=README.md)')
+    markdownPrint(if(argsURL(ndeArguments) != '#var=', '[Home](#var=)', 'Home') + ' | [About](#url=README.md)')
 
     # Render the title
     title = 'npm Dependency Explorer'
@@ -44,13 +50,13 @@ async function ndeMain():
     )
 
     # Render the package version selection links?
-    if vVersionSelect:
+    if objectGet(args, 'versionSelect'):
         ndeRenderVersionLinks(cache, packageName, packageVersion)
         return
 
     # Render the package version dependency chart?
-    elif vVersionChart:
-        ndeRenderVersionChart(cache, packageName, packageVersion, dependencyKey)
+    elif objectGet(args, 'versionChart'):
+        ndeRenderVersionChart(args, cache, packageName, packageVersion, dependencyKey)
         return
     endif
 
@@ -58,27 +64,27 @@ async function ndeMain():
     markdownPrint( \
         '', \
         '**Version:** ' + markdownEscape(packageVersion), \
-        '([versions](' + ndeURL(objectNew('versionSelect', 1)) + ') | ', \
-        '[chart](' + ndeURL(objectNew('versionChart', 1)) + '))' \
+        '(' + argsLink(ndeArguments, 'versions', objectNew('versionSelect', true)) + ' | ', \
+        argsLink(ndeArguments, 'chart', objectNew('versionChart', true)) + ')' \
     )
 
     # Load all dependencies and compute the dependency statistics
     dependencyStats = npmPackageStats(cache, packageName, packageVersion, dependencyKey)
-    dependenciesFiltered = objectGet(dependencyStats, if(vDirect, 'dependenciesDirect', 'dependencies'))
+    dependenciesFiltered = objectGet(dependencyStats, if(filterDirect, 'dependenciesDirect', 'dependencies'))
     warnings = objectGet(dependencyStats, 'warnings')
 
     # Filter to dependencies that have a newer version?
     hasLatest = arrayLength(dataFilter(dependenciesFiltered, "Latest != ''")) > 0
-    if hasLatest && vLatest:
+    if hasLatest && filterLatest:
         dependenciesFiltered = dataFilter(dependenciesFiltered, "Latest != ''")
     endif
 
     # Compute the dependency type links
-    linkPackage = if(dependencyKey != 'devDependencies', 'Package', '[Package](' + ndeURL(objectNew('type', '')) + ')')
-    linkDevelopment = if(dependencyKey == 'devDependencies', 'Development', '[Development](' + ndeURL(objectNew('type', 'Development')) + ')')
+    linkPackage = if(!showDev, 'Package', argsLink(ndeArguments, 'Package', objectNew('dev', false)))
+    linkDevelopment = if(showDev, 'Development', argsLink(ndeArguments, 'Development', objectNew('dev', true)))
 
     # Render the package dependency stats
-    dependenciesDescriptor = if(dependencyKey == 'devDependencies', '*Development* ', '')
+    dependenciesDescriptor = if(showDev, '*Development* ', '')
     markdownPrint( \
         '', \
         '**Direct ' + dependenciesDescriptor + 'dependencies:** ' + objectGet(dependencyStats, 'countDirect') + ' \\', \
@@ -94,9 +100,9 @@ async function ndeMain():
             '### Warnings', \
             '', \
             'There are ' + arrayLength(warnings) + ' warnings.' + stringFromCharCode(160), \
-            '[' + if(vWarn, 'Hide', 'Show') + '](' + ndeURL(objectNew('warn', !vWarn)) + ')' \
+            argsLink(ndeArguments, if(showWarnings, 'Hide', 'Show'), objectNew('warn', !showWarnings)) \
         )
-        if vWarn:
+        if showWarnings:
             for warning in warnings:
                 markdownPrint('', '- ' + markdownEscape(warning))
             endfor
@@ -106,21 +112,21 @@ async function ndeMain():
     # Render the dependency table
     if arrayLength(dependenciesFiltered):
         # Compute the sort links
-        linkSortName = if(vSort != 'Dependencies', 'Name', '[Name](' + ndeURL(objectNew('sort', '')) + ')')
-        linkSortDependencies = if(vSort == 'Dependencies', 'Dependencies', '[Dependencies](' + ndeURL(objectNew('sort', 'Dependencies')) + ')')
+        linkSortName = if(!sortDependencies, 'Name', argsLink(ndeArguments, 'Name', objectNew('sort', false)))
+        linkSortDependencies = if(sortDependencies, 'Dependencies', argsLink(ndeArguments, 'Dependencies', objectNew('sort', true)))
 
         # Compute the direct filter links
-        linkDirectAll = if(!vDirect, 'All', '[All](' + ndeURL(objectNew('direct', 0)) + ')')
-        linkDirect = if(vDirect, 'Direct', '[Direct](' + ndeURL(objectNew('direct', 1)) + ')')
+        linkDirectAll = if(!filterDirect, 'All', argsLink(ndeArguments, 'All', objectNew('direct', false)))
+        linkDirect = if(filterDirect, 'Direct', argsLink(ndeArguments, 'Direct', objectNew('direct', true)))
 
         # Compute the latest filter links
-        linkLatestAll = if(!vLatest, 'All', '[All](' + ndeURL(objectNew('latest', 0)) + ')')
-        linkLatest = if(vLatest, 'Latest', '[Latest](' + ndeURL(objectNew('latest', 1)) + ')')
+        linkLatestAll = if(!filterLatest, 'All', argsLink(ndeArguments, 'All', objectNew('latest', false)))
+        linkLatest = if(filterLatest, 'Latest', argsLink(ndeArguments, 'Latest', objectNew('latest', true)))
 
         # Render the filter/sort links
         markdownPrint( \
             '', \
-            '### ' + if(dependencyKey == 'devDependencies', 'Development ', '') + 'Dependencies', \
+            '### ' + if(showDev, 'Development ', '') + 'Dependencies', \
             '', \
             '**Sort:** ' + linkSortName + ' | ' + linkSortDependencies + ' \\', \
             '**Direct:** ' + linkDirectAll + ' | ' + linkDirect + if(hasLatest, ' \\', ''), \
@@ -133,16 +139,16 @@ async function ndeMain():
 
         # Sort the table data
         sortFields = arrayNew(arrayNew('Package'), arrayNew('Version'), arrayNew('Dependent'), arrayNew('Dependent Version'))
-        if vSort == 'Dependencies':
+        if sortDependencies:
             sortFields = arrayExtend(arrayNew(arrayNew('Dependencies', 1)), sortFields)
         endif
         dataSort(dependenciesFiltered, sortFields)
 
         # Make the name field links
         dataCalculatedField(dependenciesFiltered, 'Package', \
-            "'[' + markdownEscape(Package) + '](' + ndeCleanURL(objectNew('name', Package, 'version', Version)) + ')'")
+            "'[' + markdownEscape(Package) + '](' + argsURL(ndeArguments, objectNew('name', Package, 'version', Version), true) + ')'")
         dataCalculatedField(dependenciesFiltered, 'Dependent', \
-            "'[' + markdownEscape(Dependent) + '](' + ndeCleanURL(objectNew('name', Dependent, 'version', [Dependent Version])) + ')'")
+            "'[' + markdownEscape(Dependent) + '](' + argsURL(ndeArguments, objectNew('name', Dependent, 'version', [Dependent Version]), true) + ')'")
 
         # Render the dependencies table
         dataTable(dependenciesFiltered, objectNew( \
@@ -158,6 +164,20 @@ async function ndeMain():
         ))
     endif
 endfunction
+
+
+# The npm Dependency Explorer arguments
+ndeArguments = argsValidate(arrayNew( \
+    objectNew('name', 'dev', 'type', 'bool', 'default', false), \
+    objectNew('name', 'direct', 'type', 'bool', 'default', false), \
+    objectNew('name', 'latest', 'type', 'bool', 'default', false), \
+    objectNew('name', 'name'), \
+    objectNew('name', 'sort', 'type', 'bool', 'default', false), \
+    objectNew('name', 'version'), \
+    objectNew('name', 'versionChart', 'type', 'bool', 'default', false, 'explicit', true), \
+    objectNew('name', 'versionSelect', 'type', 'bool', 'default', false, 'explicit', true), \
+    objectNew('name', 'warn', 'type', 'bool', 'default', false) \
+))
 
 
 # Render the package selection form
@@ -187,7 +207,7 @@ function ndeRenderForm(cache, packageName, packageVersion):
         'c8', 'eslint', 'jsdoc', 'jsdom', 'npm', \
         'bare-script', 'element-model', 'markdown-model', 'markdown-up', 'schema-markdown' \
     )):
-        markdownPrint('', '[' + markdownEscape(exampleName) + "](#var.vName='" + urlEncodeComponent(exampleName) + "')")
+        markdownPrint('', argsLink(ndeArguments, exampleName, objectNew('name', exampleName), true))
     endfor
 endfunction
 
@@ -195,7 +215,7 @@ endfunction
 # Package name button on-click handler
 function ndePackageNameOnClick():
     packageName = stringTrim(documentInputValue('package-name-text'))
-    windowSetLocation(ndeCleanURL(objectNew('name', packageName)))
+    windowSetLocation(argsURL(ndeArguments, objectNew('name', packageName), true))
 endfunction
 
 
@@ -203,7 +223,7 @@ endfunction
 function ndeRenderVersionLinks(cache, packageName, packageVersion):
     markdownPrint( \
         '', \
-        '[Back to package](' + ndeURL(objectNew('versionSelect', 0)) + ')', \
+        argsLink(ndeArguments, 'Back to package'), \
         '', \
         '### Versions' \
     )
@@ -211,20 +231,19 @@ function ndeRenderVersionLinks(cache, packageName, packageVersion):
     packageVersionLatest = npmPackageVersionLatest(npmCacheGetPackage(cache, packageName))
     for packageSemver in packageSemvers:
         packageVersion = semverStringify(packageSemver)
-        markdownPrint('', '[' + markdownEscape(packageVersion) + '](' + \
-            ndeURL(objectNew('version', packageVersion, 'versionSelect', 0)) + ')' + \
+        markdownPrint('', argsLink(ndeArguments, packageVersion, objectNew('version', packageVersion)) + \
             if(packageVersion == packageVersionLatest, ' (latest)', ''))
     endfor
 endfunction
 
 
 # Render the package dependencies by version chart
-async function ndeRenderVersionChart(cache, packageName, packageVersion, dependencyKey):
+async function ndeRenderVersionChart(args, cache, packageName, packageVersion, dependencyKey):
     markdownPrint( \
         '', \
-        '[Back to package](' + ndeURL(objectNew('versionChart', 0)) + ')', \
+        argsLink(ndeArguments, 'Back to package'), \
         '', \
-        '### ' + if(dependencyKey == 'devDependencies', '*Development* ', '') + 'Dependencies Chart' \
+        '### ' + if(objectGet(args, 'dev') + '*Development* ', '') + 'Dependencies Chart' \
     )
 
     # Load all package version dependencies
@@ -236,7 +255,7 @@ async function ndeRenderVersionChart(cache, packageName, packageVersion, depende
     packageSemverCount = arrayLength(packageSemvers)
     for packageSemver, ixSemver in packageSemvers:
         packageVersion = semverStringify(packageSemver)
-        packageVersionURL = ndeURL(objectNew('version', packageVersion, 'versionChart', 0))
+        packageVersionURL = argsURL(ndeArguments, objectNew('version', packageVersion))
         arrayPush(versionDependencies, objectNew( \
             'Version Index', packageSemverCount - ixSemver - 1, \
             'Version', '[' + markdownEscape(packageVersion) + '](' + packageVersionURL + ')', \
@@ -261,64 +280,4 @@ async function ndeRenderVersionChart(cache, packageName, packageVersion, depende
             'Version', objectNew('markdown', true) \
         ) \
     ))
-endfunction
-
-
-# Helper to create application links
-function ndeURL(args):
-    # Arguments overrides
-    name = objectGet(args, 'name')
-    version = objectGet(args, 'version')
-    versionChart = objectGet(args, 'versionChart')
-    versionSelect = objectGet(args, 'versionSelect')
-    type = objectGet(args, 'type')
-    direct = objectGet(args, 'direct')
-    latest = objectGet(args, 'latest')
-    sort = objectGet(args, 'sort')
-    warn = objectGet(args, 'warn')
-
-    # Variable arguments
-    name = if(name != null, name, vName)
-    version = if(version != null, version, vVersion)
-    type = if(type != null, type, vType)
-    direct = if(direct != null, direct, vDirect)
-    latest = if(latest != null, latest, vLatest)
-    sort = if(sort != null, sort, vSort)
-    warn = if(warn != null, warn, vWarn)
-
-    # Cleared arguments
-    name = if(name != null && stringLength(name) > 0, name)
-    version = if(version != null && stringLength(version) > 0, version)
-    type = if(type != null && stringLength(type) > 0, type)
-    sort = if(sort != null && stringLength(sort) > 0, sort)
-
-    # Create the link
-    parts = arrayNew()
-    if(direct != null && direct, arrayPush(parts, 'var.vDirect=1'))
-    if(latest != null && latest, arrayPush(parts, 'var.vLatest=1'))
-    if(name != null, arrayPush(parts, "var.vName='" + urlEncodeComponent(name) + "'"))
-    if(sort != null, arrayPush(parts, "var.vSort='" + urlEncodeComponent(sort) + "'"))
-    if(type != null, arrayPush(parts, "var.vType='" + urlEncodeComponent(type) + "'"))
-    if(version != null, arrayPush(parts, "var.vVersion='" + urlEncodeComponent(version) + "'"))
-    if(versionChart != null && versionChart, arrayPush(parts, 'var.vVersionChart=1'))
-    if(versionSelect != null && versionSelect, arrayPush(parts, 'var.vVersionSelect=1'))
-    if(warn != null && warn, arrayPush(parts, 'var.vWarn=1'))
-    return if(arrayLength(parts) != 0, '#' + arrayJoin(parts, '&'), '#var=')
-endfunction
-
-
-# Helper to create package/version application links
-function ndeCleanURL(args):
-    argsClean = objectNew( \
-        'name', '', \
-        'version', '', \
-        'versionChart', 0, \
-        'versionSelect', 0, \
-        'type', '', \
-        'direct', 0, \
-        'latest', 0, \
-        'sort', '', \
-        'warn', 0 \
-     )
-    return ndeURL(objectAssign(argsClean, args))
 endfunction
