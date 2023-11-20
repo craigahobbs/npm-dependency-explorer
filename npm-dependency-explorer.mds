@@ -146,9 +146,9 @@ async function ndeMain():
 
         # Make the name field links
         dataCalculatedField(dependenciesFiltered, 'Package', \
-            "'[' + markdownEscape(Package) + '](' + argsURL(ndeArguments, objectNew('name', Package, 'version', Version), true) + ')'")
+            "argsLink(ndeArguments, [Package], objectNew('name', [Package], 'version', [Version]), true, argsTopHeaderId)")
         dataCalculatedField(dependenciesFiltered, 'Dependent', \
-            "'[' + markdownEscape(Dependent) + '](' + argsURL(ndeArguments, objectNew('name', Dependent, 'version', [Dependent Version]), true) + ')'")
+            "argsLink(ndeArguments, [Dependent], objectNew('name', [Dependent], 'version', [Dependent Version]), true, argsTopHeaderId)")
 
         # Render the dependencies table
         dataTable(dependenciesFiltered, objectNew( \
@@ -231,7 +231,7 @@ function ndeRenderVersionLinks(cache, packageName, packageVersion):
     packageVersionLatest = npmPackageVersionLatest(npmCacheGetPackage(cache, packageName))
     for packageSemver in packageSemvers:
         packageVersion = semverStringify(packageSemver)
-        markdownPrint('', argsLink(ndeArguments, packageVersion, objectNew('version', packageVersion)) + \
+        markdownPrint('', argsLink(ndeArguments, packageVersion, objectNew('version', packageVersion), false, argsTopHeaderId) + \
             if(packageVersion == packageVersionLatest, ' (latest)', ''))
     endfor
 endfunction
@@ -255,10 +255,9 @@ async function ndeRenderVersionChart(args, cache, packageName, packageVersion, d
     packageSemverCount = arrayLength(packageSemvers)
     for packageSemver, ixSemver in packageSemvers:
         packageVersion = semverStringify(packageSemver)
-        packageVersionURL = argsURL(ndeArguments, objectNew('version', packageVersion))
         arrayPush(versionDependencies, objectNew( \
             'Version Index', packageSemverCount - ixSemver - 1, \
-            'Version', '[' + markdownEscape(packageVersion) + '](' + packageVersionURL + ')', \
+            'Version', argsLink(ndeArguments, packageVersion, objectNew('version', packageVersion), false, argsTopHeaderId), \
             'Dependencies', npmPackageDependencyCount(cache, packageName, packageVersion, dependencyKey) \
         ))
     endfor
