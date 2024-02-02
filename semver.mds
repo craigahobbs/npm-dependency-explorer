@@ -118,8 +118,8 @@ function semverCompare(semver, other):
             otherReleasePart = arrayGet(otherRelease, ixPart)
 
             # Numeric parts are less-than non-numeric parts
-            semverPartNumeric = (stringLength(semverReleasePart) == null)
-            otherPartNumeric = (stringLength(otherReleasePart) == null)
+            semverPartNumeric = (systemType(semverReleasePart) != 'string')
+            otherPartNumeric = (systemType(otherReleasePart) != 'string')
             result = if(semverPartNumeric && !otherPartNumeric, -1, if(!semverPartNumeric && otherPartNumeric, 1, 0))
             if result:
                 break
