@@ -20,7 +20,7 @@ function semverParse(text, groupSuffix):
     semver = null
 
     # Match the SemVer text
-    match = if(stringLength(text) != null, regexMatch(semverRegexSemver, text), text)
+    match = if(systemType(text) == 'string', regexMatch(semverRegexSemver, text), text)
     if match != null:
         groups = objectGet(match, 'groups')
         if groupSuffix == null:
@@ -34,7 +34,7 @@ function semverParse(text, groupSuffix):
             release = arrayNew()
             for part in stringSplit(releaseText, '.'):
                 # Parse all-digits parts as integers
-                part = if(regexMatch(semverRegexDigits, part) != null, numberParseInt(part), part)
+                part = if(regexMatch(semverRegexDigits, part), numberParseInt(part), part)
                 arrayPush(release, part)
             endfor
         endif
