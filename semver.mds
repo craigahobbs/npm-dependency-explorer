@@ -45,9 +45,9 @@ function semverParse(text, groupSuffix):
         patch = objectGet(groups, 'patch' + groupSuffix)
         build = objectGet(groups, 'build' + groupSuffix)
         semver = objectNew( \
-            'major', if(regexTest(semverRegexDigits, major), numberParseInt(major), 0), \
-            'minor', if(regexTest(semverRegexDigits, minor), numberParseInt(minor), 0), \
-            'patch', if(regexTest(semverRegexDigits, patch), numberParseInt(patch), 0), \
+            'major', if(regexMatch(semverRegexDigits, major), numberParseInt(major), 0), \
+            'minor', if(regexMatch(semverRegexDigits, minor), numberParseInt(minor), 0), \
+            'patch', if(regexMatch(semverRegexDigits, patch), numberParseInt(patch), 0), \
             'release', release, \
             'build', build \
         )
@@ -210,7 +210,7 @@ function semverMatchPart(semvers, range):
     if matchTilde != null:
         lower = semverParse(matchTilde)
         groups = objectGet(matchTilde, 'groups')
-        lowerHasMinor = regexTest(semverRegexDigits, objectGet(groups, 'minor'))
+        lowerHasMinor = regexMatch(semverRegexDigits, objectGet(groups, 'minor'))
         if lowerHasMinor:
             upper = semverNew(objectGet(lower, 'major'), objectGet(lower, 'minor') + 1, 0)
         else:
@@ -241,7 +241,7 @@ function semverMatchPart(semvers, range):
         lower = semverParse(matchHyphen)
         upper = semverParse(matchHyphen, '2')
         groups = objectGet(matchHyphen, 'groups')
-        upperInclusive = regexTest(semverRegexDigits, objectGet(groups, 'patch2'))
+        upperInclusive = regexMatch(semverRegexDigits, objectGet(groups, 'patch2'))
         return semverMatchPartFilter(semvers, lower, upper, upperInclusive)
     endif
 
@@ -253,9 +253,9 @@ function semverMatchPart(semvers, range):
         groups = objectGet(matchRangePart, 'groups')
         rangeOp = objectGet(groups, 'op')
         rangeValue = semverParse(matchRangePart)
-        rangeValueHasMajor = regexTest(semverRegexDigits, objectGet(groups, 'major'))
-        rangeValueHasMinor = regexTest(semverRegexDigits, objectGet(groups, 'minor'))
-        rangeValueHasPatch = regexTest(semverRegexDigits, objectGet(groups, 'patch'))
+        rangeValueHasMajor = regexMatch(semverRegexDigits, objectGet(groups, 'major'))
+        rangeValueHasMinor = regexMatch(semverRegexDigits, objectGet(groups, 'minor'))
+        rangeValueHasPatch = regexMatch(semverRegexDigits, objectGet(groups, 'patch'))
 
         # '*'?
         if (rangeOp == '' || rangeOp == '=') && !rangeValueHasMajor:
