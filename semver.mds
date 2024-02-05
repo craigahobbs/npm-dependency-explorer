@@ -222,7 +222,6 @@ function semverMatchPart(semvers, range):
     # Carrot range
     matchCarrot = regexMatch(semverRegexCarrot, range)
     if matchCarrot != null:
-        groups = objectGet(matchCarrot, 'groups')
         lower = semverParse(matchCarrot)
         major = objectGet(lower, 'major')
         minor = objectGet(lower, 'minor')
