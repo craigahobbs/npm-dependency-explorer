@@ -76,7 +76,7 @@ async function npmCacheLoadPackage(cache, packageName, packageVersion, dependenc
     if objectHas(cachePackages, packageName):
         packageData = objectGet(cachePackages, packageName)
     else:
-        packageData = systemFetch(npmPackageURL(packageName))
+        packageData = jsonParse(systemFetch(npmPackageURL(packageName)))
         npmCacheAddPackage(cache, packageName, packageData)
     endif
 
@@ -104,7 +104,7 @@ async function npmCacheLoadPackageAll(cache, packageName, dependencyKey):
     if objectHas(cachePackages, packageName):
         packageData = objectGet(cachePackages, packageName)
     else:
-        packageData = systemFetch(npmPackageURL(packageName))
+        packageData = jsonParse(systemFetch(npmPackageURL(packageName)))
         npmCacheAddPackage(cache, packageName, packageData)
     endif
 
@@ -175,7 +175,7 @@ async function npmCacheLoadPackageJSONs(cache, packageJSONs, dependencyKey):
 
     # Fetch the unloaded depedency data URLs and add to the cache
     for dependencyData, ixDependencyData in systemFetch(unloadedURLs):
-        npmCacheAddPackage(cache, arrayGet(unloadedNames, ixDependencyData), dependencyData)
+        npmCacheAddPackage(cache, arrayGet(unloadedNames, ixDependencyData), jsonParse(dependencyData))
     endfor
 
     # Get the array of fetched package JSONs

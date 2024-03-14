@@ -180,7 +180,7 @@ endfunction
 function semverMatch(semvers, range):
     # Compute all matched semvers
     matchedSemvers = arrayNew()
-    for rangePart in stringSplit(range, semverRegexRangeSplit):
+    for rangePart in regexSplit(semverRegexRangeSplit, range):
         partSemvers = semverMatchPart(semvers, rangePart)
         if partSemvers != null:
             arrayExtend(matchedSemvers, partSemvers)
@@ -282,7 +282,7 @@ function semverMatchPart(semvers, range):
             )
         endif
 
-        rangeParts = stringSlice(rangeParts, stringLength(arrayGet(matchRangePart, 0)))
+        rangeParts = stringSlice(rangeParts, stringLength(objectGet(groups, '0')))
         matchRangePart = regexMatch(semverRegexRangePart, rangeParts)
     endwhile
 
