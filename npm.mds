@@ -155,11 +155,12 @@ async function npmCacheLoadPackageJSONs(cache, packageJSONs, dependencyKey):
 
                 # Add the unloaded dependency package
                 if !objectHas(cachePackages, dependencyName):
-                    objectSet(unloadedNames, dependencyName)
+                    objectSet(unloadedNames, dependencyName, null)
                 endif
 
                 # Add the unloaded dependency range
-                if !objectHas(objectGet(cacheRanges, dependencyName), dependencyRange):
+                dependencyRanges = objectGet(cacheRanges, dependencyName)
+                if dependencyRanges == null || !objectHas(dependencyRanges, dependencyRange):
                     arrayPush(unloadedRanges, arrayNew(dependencyName, dependencyRange))
                 endif
             endfor

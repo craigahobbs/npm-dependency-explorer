@@ -24,7 +24,7 @@ async function ndeMain():
     if packageName != null:
         packageVersion = npmCacheLoadPackage(cache, packageName, packageVersion, dependencyKey)
     endif
-    packageData = npmCacheGetPackage(cache, packageName)
+    packageData = if(packageName != null, npmCacheGetPackage(cache, packageName))
     packageJSON = if(packageData != null, npmPackageJSON(packageData, packageVersion))
 
     # Render the menu

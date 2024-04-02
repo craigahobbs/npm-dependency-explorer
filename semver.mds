@@ -46,8 +46,8 @@ function semverParse(text, groupSuffix):
         build = objectGet(groups, 'build' + groupSuffix)
         semver = objectNew( \
             'major', if(regexMatch(semverRegexDigits, major), numberParseInt(major), 0), \
-            'minor', if(regexMatch(semverRegexDigits, minor), numberParseInt(minor), 0), \
-            'patch', if(regexMatch(semverRegexDigits, patch), numberParseInt(patch), 0), \
+            'minor', if(minor != null && regexMatch(semverRegexDigits, minor), numberParseInt(minor), 0), \
+            'patch', if(patch != null && regexMatch(semverRegexDigits, patch), numberParseInt(patch), 0), \
             'release', release, \
             'build', build \
         )
@@ -109,9 +109,9 @@ function semverCompare(semver, other):
 
     # Compare the release parts
     if !result:
-        semverReleaseLength = arrayLength(semverRelease)
-        otherReleaseLength = arrayLength(otherRelease)
-        releaseLength = mathMax(semverReleaseLength, otherReleaseLength)
+        semverReleaseLength = if(semverRelease != null, arrayLength(semverRelease))
+        otherReleaseLength = if(otherRelease != null, arrayLength(otherRelease))
+        releaseLength = mathMin(semverReleaseLength, otherReleaseLength)
         ixPart = 0
         while ixPart < releaseLength:
             semverReleasePart = arrayGet(semverRelease, ixPart)
@@ -210,7 +210,8 @@ function semverMatchPart(semvers, range):
     if matchTilde != null:
         lower = semverParse(matchTilde)
         groups = objectGet(matchTilde, 'groups')
-        lowerHasMinor = regexMatch(semverRegexDigits, objectGet(groups, 'minor'))
+        minor = objectGet(groups, 'minor')
+        lowerHasMinor = if(minor != null, regexMatch(semverRegexDigits, minor))
         if lowerHasMinor:
             upper = semverNew(objectGet(lower, 'major'), objectGet(lower, 'minor') + 1, 0)
         else:
@@ -240,7 +241,8 @@ function semverMatchPart(semvers, range):
         lower = semverParse(matchHyphen)
         upper = semverParse(matchHyphen, '2')
         groups = objectGet(matchHyphen, 'groups')
-        upperInclusive = regexMatch(semverRegexDigits, objectGet(groups, 'patch2'))
+        patch2 = objectGet(groups, 'patch2')
+        upperInclusive = if(patch2 != null, regexMatch(semverRegexDigits, patch2))
         return semverMatchPartFilter(semvers, lower, upper, upperInclusive)
     endif
 
@@ -252,24 +254,26 @@ function semverMatchPart(semvers, range):
         groups = objectGet(matchRangePart, 'groups')
         rangeOp = objectGet(groups, 'op')
         rangeValue = semverParse(matchRangePart)
+        rangeMinor = objectGet(groups, 'minor')
+        rangePatch = objectGet(groups, 'patch')
         rangeValueHasMajor = regexMatch(semverRegexDigits, objectGet(groups, 'major'))
-        rangeValueHasMinor = regexMatch(semverRegexDigits, objectGet(groups, 'minor'))
-        rangeValueHasPatch = regexMatch(semverRegexDigits, objectGet(groups, 'patch'))
+        rangeValueHasMinor = if(rangeMinor != null, regexMatch(semverRegexDigits, rangeMinor))
+        rangeValueHasPatch = if(rangePatch != null, regexMatch(semverRegexDigits, rangePatch))
 
         # '*'?
-        if (rangeOp == '' || rangeOp == '=') && !rangeValueHasMajor:
+        if (rangeOp == '' || rangeOp == '=') && rangeValueHasMajor == null:
             filtered = dataFilter(filtered, "objectGet(semver, 'release') == null")
 
         # Specific-version?
-        elif rangeOp == '=' || (rangeOp == '' && rangeValueHasPatch):
+        elif rangeOp == '=' || (rangeOp == '' && rangeValueHasPatch != null):
             filtered = dataFilter(filtered, 'semverCompare(semver, rangeValue) == 0', objectNew('rangeValue', rangeValue))
 
         # X-range?
         elif rangeOp == '':
-            if rangeValueHasMinor:
+            if rangeValueHasMinor != null:
                 upper = semverNew(objectGet(rangeValue, 'major'), objectGet(rangeValue, 'minor') + 1, 0)
             else:
-                upper = semverNew(objectGet(rangeValue, 'major') + 1, 0, 0, '0')
+                upper = semverNew(objectGet(rangeValue, 'major') + 1, 0, 0, arrayNew('0'))
             endif
             filtered = semverMatchPartFilter(filtered, lower, upper)
 
@@ -298,22 +302,26 @@ endfunction
 # Helper to filter a lower-upper semver range
 function semverMatchPartFilter(semvers, lower, upper, upperInclusive):
     # Filter pre-release versions
-    if objectGet(lower, 'release') == null:
-        filtered = dataFilter(semvers, "objectGet(semver, 'release') == null")
+    if lower == null:
+        filtered = semvers
     else:
-        filtered = dataFilter( \
-            semvers, \
-            "objectGet(semver, 'release') == null || (major == lowerMajor && minor == lowerMinor && patch == lowerPatch)", \
-            objectNew( \
-                'lowerMajor', objectGet(lower, 'major'), 'lowerMinor', objectGet(lower, 'minor'), 'lowerPatch', objectGet(lower, 'patch') \
-            ) \
-        )
+        if objectGet(lower, 'release') == null:
+            filtered = dataFilter(semvers, "objectGet(semver, 'release') == null")
+        else:
+            filtered = dataFilter( \
+                semvers, \
+                "objectGet(semver, 'release') == null || (major == lowerMajor && minor == lowerMinor && patch == lowerPatch)", \
+                objectNew( \
+                    'lowerMajor', objectGet(lower, 'major'), 'lowerMinor', objectGet(lower, 'minor'), 'lowerPatch', objectGet(lower, 'patch') \
+                ) \
+            )
+        endif
     endif
 
     # Filter the the hyphen range
     return dataFilter( \
         filtered, \
-        'semverCompare(semver, lower) >= 0 && semverCompare(semver, upper) ' + if(upperInclusive, '<=', '<') + ' 0', \
+        '(lower == null || semverCompare(semver, lower) >= 0) && semverCompare(semver, upper) ' + if(upperInclusive != null, '<=', '<') + ' 0', \
         objectNew('lower', lower, 'upper', upper) \
     )
 endfunction
@@ -325,7 +333,6 @@ semverRegexStrVersion = \
     '(?<major>[xX*]|0|[1-9]\\d*)(?:\\.(?<minor>[xX*]|0|[1-9]\\d*)(?:\\.(?<patch>[xX*]|0|[1-9]\\d*)' + semverRegexStrReleaseBuild + ')?)?'
 semverRegexStrVersion2 = stringReplace(stringReplace(stringReplace(stringReplace(stringReplace(semverRegexStrVersion, \
     '<major>', '<major2>'), '<minor>', '<minor2>'), '<patch>', '<patch2>'), '<release>', '<release2>'), '<build>', '<build2>')
-semverRegexVersion = regexNew('^' + semverRegexStrVersion + '$')
 semverRegexRangePart = regexNew('^(?<op>|=|<|<=|>|>=)\\s*' + semverRegexStrVersion + '\\s*')
 semverRegexCarrot = regexNew('^\\^\\s*' + semverRegexStrVersion + '$')
 semverRegexHyphen = regexNew('^' + semverRegexStrVersion + '\\s+-\\s+' + semverRegexStrVersion2 + '$')
