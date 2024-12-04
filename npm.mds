@@ -59,7 +59,8 @@ function npmCacheGetPackageVersion(cache, packageName, packageRange):
     else:
         packageVersion = semverMatch(npmCacheGetPackageVersions(cache, packageName), packageRange)
         if packageVersion == null:
-            packageVersion = npmPackageVersionLatest(npmCacheGetPackage(cache, packageName))
+            packageData = npmCacheGetPackage(cache, packageName)
+            packageVersion = if(packageData != null, npmPackageVersionLatest(packageData))
             systemLogDebug('npm: Un-matched SemVer range "' + packageRange + '" for package "' + packageName + '"' + \
                 ', using "' + packageVersion + '" (latest)')
         endif
@@ -76,7 +77,8 @@ async function npmCacheLoadPackage(cache, packageName, packageVersion, dependenc
     if objectHas(cachePackages, packageName):
         packageData = objectGet(cachePackages, packageName)
     else:
-        packageData = jsonParse(systemFetch(npmPackageURL(packageName)))
+        packageData = systemFetch(npmPackageURL(packageName))
+        packageData = if(packageData != null, jsonParse(packageData))
         npmCacheAddPackage(cache, packageName, packageData)
     endif
 
@@ -104,7 +106,8 @@ async function npmCacheLoadPackageAll(cache, packageName, dependencyKey):
     if objectHas(cachePackages, packageName):
         packageData = objectGet(cachePackages, packageName)
     else:
-        packageData = jsonParse(systemFetch(npmPackageURL(packageName)))
+        packageData = systemFetch(npmPackageURL(packageName))
+        packageData = if(packageData != null, jsonParse(packageData))
         npmCacheAddPackage(cache, packageName, packageData)
     endif
 
@@ -176,7 +179,8 @@ async function npmCacheLoadPackageJSONs(cache, packageJSONs, dependencyKey):
 
     # Fetch the unloaded depedency data URLs and add to the cache
     for dependencyData, ixDependencyData in systemFetch(unloadedURLs):
-        npmCacheAddPackage(cache, arrayGet(unloadedNames, ixDependencyData), jsonParse(dependencyData))
+        dependencyData = if(dependencyData != null, jsonParse(dependencyData))
+        npmCacheAddPackage(cache, arrayGet(unloadedNames, ixDependencyData), dependencyData)
     endfor
 
     # Get the array of fetched package JSONs
