@@ -27,8 +27,8 @@ clean:
 
 
 test: $(DEFAULT_VENV_BUILD)
-	$(DEFAULT_VENV_BIN)/bare -m test/runTests.mds$(if $(DEBUG), -d)$(if $(TEST), -v vTest "'$(TEST)'")
+	$(DEFAULT_VENV_BIN)/bare -m test/runTests.bare$(if $(DEBUG), -d)$(if $(TEST), -v vTest "'$(TEST)'")
 
 
 lint: $(DEFAULT_VENV_BUILD)
-	$(DEFAULT_VENV_BIN)/bare -s *.mds test/*.mds
+	$(DEFAULT_VENV_BIN)/bare -s *.bare test/*.bare

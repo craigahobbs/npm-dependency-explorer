@@ -1,9 +1,9 @@
 # Licensed under the MIT License
 # https://github.com/craigahobbs/npm-dependency-explorer/blob/main/LICENSE
 
-include <args.mds>
-include <forms.mds>
-include 'npm.mds'
+include <args.bare>
+include <forms.bare>
+include 'npm.bare'
 
 
 # The npm Dependency Explorer main entry point
