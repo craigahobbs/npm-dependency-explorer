@@ -3,8 +3,22 @@
 
 include <unittest.bare>
 
+
+# Start coverage
+coverageStart()
+
+# Coverage includes (in lieu of tests)
+include '../npm-dependency-explorer.bare'
+include '../npm.bare'
+
 # Test includes
 include 'testSemver.bare'
 
+# Stop coverage
+coverageStop()
+
 # Test report
-return unittestReport()
+return unittestReport(objectNew( \
+    'coverageExclude', arrayNew('runTests.bare'), \
+    'coverageMin', 51 \
+))
