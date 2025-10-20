@@ -30,11 +30,11 @@ endfunction
 
 # Initialize the package data cache
 function npmCacheNew():
-    return objectNew( \
-        'packages', objectNew(), \
-        'versions', objectNew(), \
-        'ranges', objectNew() \
-    )
+    return { \
+        'packages': {}, \
+        'versions': {}, \
+        'ranges': {} \
+    }
 endfunction
 
 
@@ -91,7 +91,7 @@ async function npmCacheLoadPackage(cache, packageName, packageVersion, dependenc
         # Load the package JSON's dependencies
         packageJSON = npmPackageJSON(packageData, packageVersion)
         if packageJSON != null:
-            npmCacheLoadPackageJSONs(cache, arrayNew(packageJSON), dependencyKey)
+            npmCacheLoadPackageJSONs(cache, [packageJSON], dependencyKey)
         endif
     endif
 
@@ -113,7 +113,7 @@ async function npmCacheLoadPackageAll(cache, packageName, dependencyKey):
 
     if packageData != null:
         # Get the package version JSONs
-        packageJSONs = arrayNew()
+        packageJSONs = []
         packageVersions = objectGet(packageData, 'versions')
         for packageVersion in objectKeys(packageVersions):
             arrayPush(packageJSONs, objectGet(packageVersions, packageVersion))
@@ -132,11 +132,11 @@ function npmCacheAddPackage(cache, packageName, packageData):
 
     # Add the parsed semver array to the cache
     versionKeys = if(packageData != null, objectKeys(objectGet(packageData, 'versions')))
-    versions = if(versionKeys != null, semverVersions(versionKeys), arrayNew())
+    versions = if(versionKeys != null, semverVersions(versionKeys), [])
     objectSet(objectGet(cache, 'versions'), packageName, versions)
 
     # Add the empty semver match map
-    objectSet(objectGet(cache, 'ranges'), packageName, objectNew())
+    objectSet(objectGet(cache, 'ranges'), packageName, {})
 endfunction
 
 
@@ -146,8 +146,8 @@ async function npmCacheLoadPackageJSONs(cache, packageJSONs, dependencyKey):
     cacheRanges = objectGet(cache, 'ranges')
 
     # Compute the unloaded dependencies for the given package JSON
-    unloadedNames = objectNew()
-    unloadedRanges = arrayNew()
+    unloadedNames = {}
+    unloadedRanges = []
     for packageJSON in packageJSONs:
         # Get the package dependencies
         packageDependencies = objectGet(packageJSON, dependencyKey)
@@ -164,7 +164,7 @@ async function npmCacheLoadPackageJSONs(cache, packageJSONs, dependencyKey):
                 # Add the unloaded dependency range
                 dependencyRanges = objectGet(cacheRanges, dependencyName)
                 if dependencyRanges == null || !objectHas(dependencyRanges, dependencyRange):
-                    arrayPush(unloadedRanges, arrayNew(dependencyName, dependencyRange))
+                    arrayPush(unloadedRanges, [dependencyName, dependencyRange])
                 endif
             endfor
         endif
@@ -172,7 +172,7 @@ async function npmCacheLoadPackageJSONs(cache, packageJSONs, dependencyKey):
 
     # Compute the package data URLs for the unloaded dependency package names
     unloadedNames = objectKeys(unloadedNames)
-    unloadedURLs = arrayNew()
+    unloadedURLs = []
     for unloadedName in unloadedNames:
         arrayPush(unloadedURLs, npmPackageURL(unloadedName))
     endfor
@@ -184,7 +184,7 @@ async function npmCacheLoadPackageJSONs(cache, packageJSONs, dependencyKey):
     endfor
 
     # Get the array of fetched package JSONs
-    unloadedJSONs = arrayNew()
+    unloadedJSONs = []
     for unloadedNameRange in unloadedRanges:
         unloadedName = arrayGet(unloadedNameRange, 0)
         unloadedRange = arrayGet(unloadedNameRange, 1)
@@ -218,7 +218,7 @@ endfunction
 function npmCacheGetPackageDependencies(cache, dependencies, warnings, completed, packageName, packageVersion, dependencyKey):
     # Package and version already loaded?
     if !objectHas(completed, packageName):
-        objectSet(completed, packageName, objectNew())
+        objectSet(completed, packageName, {})
     endif
     completedVersions = objectGet(completed, packageName)
     if objectHas(completedVersions, packageVersion):
@@ -248,14 +248,14 @@ function npmCacheGetPackageDependencies(cache, dependencies, warnings, completed
         # Add the dependency row
         dependencyData = npmCacheGetPackage(cache, dependencyName)
         dependencyLatest = if(dependencyData != null, npmPackageVersionLatest(dependencyData))
-        arrayPush(dependencies, objectNew( \
-            'Package', dependencyName, \
-            'Version', dependencyVersion, \
-            'Latest', if(dependencyVersion == dependencyLatest, '', dependencyLatest), \
-            'Range', dependencyRange, \
-            'Dependent', packageName, \
-            'Dependent Version', packageVersion \
-        ))
+        arrayPush(dependencies, { \
+            'Package': dependencyName, \
+            'Version': dependencyVersion, \
+            'Latest': if(dependencyVersion == dependencyLatest, '', dependencyLatest), \
+            'Range': dependencyRange, \
+            'Dependent': packageName, \
+            'Dependent Version': packageVersion \
+        })
 
         # Add the dependency's dependencies
         npmCacheGetPackageDependencies(cache, dependencies, warnings, completed, dependencyName, dependencyVersion, 'dependencies')
@@ -265,16 +265,16 @@ endfunction
 
 # Get a package's total dependency count
 function npmPackageDependencyCount(cache, packageName, packageVersion, dependencyKey):
-    dependencies = arrayNew()
-    warnings = arrayNew()
-    completed = objectNew()
+    dependencies = []
+    warnings = []
+    completed = {}
     npmCacheGetPackageDependencies(cache, dependencies, warnings, completed, packageName, packageVersion, dependencyKey)
-    dependenciesTotal = dataAggregate(dependencies, objectNew( \
-        'categories', arrayNew('Package', 'Version'), \
-        'measures', arrayNew( \
-            objectNew('field', 'Count', 'function', 'count') \
-        ) \
-    ))
+    dependenciesTotal = dataAggregate(dependencies, { \
+        'categories': ['Package', 'Version'], \
+        'measures': [ \
+            {'field': 'Count', 'function': 'count'} \
+        ] \
+    })
     return arrayLength(dependenciesTotal)
 endfunction
 
@@ -282,9 +282,9 @@ endfunction
 # Compute a package's total and direct dependencies with warnings
 function npmPackageStats(cache, packageName, packageVersion, dependencyKey):
     # Get the package dependencies
-    dependencies = arrayNew()
-    warnings = arrayNew()
-    completed = objectNew()
+    dependencies = []
+    warnings = []
+    completed = {}
     npmCacheGetPackageDependencies(cache, dependencies, warnings, completed, packageName, packageVersion, dependencyKey)
     if dependencyKey != 'devDependencies':
         npmCacheGetPackageDependencies(cache, dependencies, warnings, completed, packageName, packageVersion, 'optionalDependencies')
@@ -292,31 +292,31 @@ function npmPackageStats(cache, packageName, packageVersion, dependencyKey):
 
     # Compute the dependency statistics
     dependenciesDirect = dataFilter(dependencies, 'Dependent == packageName && [Dependent Version] == packageVersion', \
-        objectNew('packageName', packageName, 'packageVersion', packageVersion))
-    dependenciesTotal = dataAggregate(dependencies, objectNew( \
-        'categories', arrayNew('Package', 'Version'), \
-        'measures', arrayNew( \
-            objectNew('field', 'Count', 'function', 'count') \
-        ) \
-    ))
+        {'packageName': packageName, 'packageVersion': packageVersion})
+    dependenciesTotal = dataAggregate(dependencies, { \
+        'categories': ['Package', 'Version'], \
+        'measures': [ \
+            {'field': 'Count', 'function': 'count'} \
+        ] \
+    })
 
     # Multiple-dependency-version warning?
     dependenciesMultiple = dataFilter( \
-        dataAggregate(dependenciesTotal, objectNew( \
-            'categories', arrayNew('Package'), \
-            'measures', arrayNew( \
-                objectNew('field', 'Count', 'function', 'count') \
-            ) \
-        )), \
+        dataAggregate(dependenciesTotal, { \
+            'categories': ['Package'], \
+            'measures': [ \
+                {'field': 'Count', 'function': 'count'} \
+            ] \
+        }), \
         'Count > 1' \
     )
     if arrayLength(dependenciesMultiple):
-        dataSort(dependenciesTotal, arrayNew(arrayNew('Package'), arrayNew('Version')))
-        dataSort(dependenciesMultiple, arrayNew(arrayNew('Package'), arrayNew('Version')))
+        dataSort(dependenciesTotal, [['Package'], ['Version']])
+        dataSort(dependenciesMultiple, [['Package'], ['Version']])
         for dependency in dependenciesMultiple:
             dependencyName = objectGet(dependency, 'Package')
-            dependencyVersions = dataFilter(dependenciesTotal, 'Package == dependencyName', objectNew('dependencyName', dependencyName))
-            versions = arrayNew()
+            dependencyVersions = dataFilter(dependenciesTotal, 'Package == dependencyName', {'dependencyName': dependencyName})
+            versions = []
             for dependencyVersion in dependencyVersions:
                 arrayPush(versions, '"' + objectGet(dependencyVersion, 'Version') + '"')
             endfor
@@ -325,11 +325,11 @@ function npmPackageStats(cache, packageName, packageVersion, dependencyKey):
     endif
 
     # Return the dependency statistics
-    return objectNew( \
-        'count', arrayLength(dependenciesTotal), \
-        'countDirect', arrayLength(dependenciesDirect), \
-        'dependencies', dependencies, \
-        'dependenciesDirect', dependenciesDirect, \
-        'warnings', warnings \
-    )
+    return { \
+        'count': arrayLength(dependenciesTotal), \
+        'countDirect': arrayLength(dependenciesDirect), \
+        'dependencies': dependencies, \
+        'dependenciesDirect': dependenciesDirect, \
+        'warnings': warnings \
+    }
 endfunction

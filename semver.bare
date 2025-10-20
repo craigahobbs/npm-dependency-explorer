@@ -4,13 +4,13 @@
 
 # Create a new SemVer object
 function semverNew(major, minor, patch, release):
-    semver = objectNew( \
-        'major', major, \
-        'minor', minor, \
-        'patch', patch, \
-        'release', release, \
-        'build', null \
-    )
+    semver = { \
+        'major': major, \
+        'minor': minor, \
+        'patch': patch, \
+        'release': release, \
+        'build': null \
+    }
     return semver
 endfunction
 
@@ -31,7 +31,7 @@ function semverParse(text, groupSuffix):
         release = null
         releaseText = objectGet(groups, 'release' + groupSuffix)
         if releaseText != null:
-            release = arrayNew()
+            release = []
             for part in stringSplit(releaseText, '.'):
                 # Parse all-digits parts as integers
                 part = if(regexMatch(semverRegexDigits, part), numberParseInt(part), part)
@@ -44,13 +44,13 @@ function semverParse(text, groupSuffix):
         minor = objectGet(groups, 'minor' + groupSuffix)
         patch = objectGet(groups, 'patch' + groupSuffix)
         build = objectGet(groups, 'build' + groupSuffix)
-        semver = objectNew( \
-            'major', if(regexMatch(semverRegexDigits, major), numberParseInt(major), 0), \
-            'minor', if(minor != null && regexMatch(semverRegexDigits, minor), numberParseInt(minor), 0), \
-            'patch', if(patch != null && regexMatch(semverRegexDigits, patch), numberParseInt(patch), 0), \
-            'release', release, \
-            'build', build \
-        )
+        semver = { \
+            'major': if(regexMatch(semverRegexDigits, major), numberParseInt(major), 0), \
+            'minor': if(minor != null && regexMatch(semverRegexDigits, minor), numberParseInt(minor), 0), \
+            'patch': if(patch != null && regexMatch(semverRegexDigits, patch), numberParseInt(patch), 0), \
+            'release': release, \
+            'build': build \
+        }
     endif
 
     return semver
@@ -69,13 +69,13 @@ semverRegexDigits = regexNew('^\d+$')
 function semverStringify(semver):
     release = objectGet(semver, 'release')
     build = objectGet(semver, 'build')
-    return arrayJoin(arrayNew( \
+    return arrayJoin([ \
         objectGet(semver, 'major'), '.', \
         objectGet(semver, 'minor'), '.', \
         objectGet(semver, 'patch'), \
         if(release != null, '-' + arrayJoin(release, '.'), ''), \
         if(build != null, '+' + build, '') \
-    ), '')
+    ], '')
 endfunction
 
 
@@ -162,7 +162,7 @@ endfunction
 
 # Parse an array of SemVer text to an array of SemVer objects
 function semverVersions(versions):
-    semvers = arrayNew()
+    semvers = []
     for version in versions:
         semver = semverParse(version)
         if semver != null:
@@ -179,7 +179,7 @@ endfunction
 # Match a SemVer range
 function semverMatch(semvers, range):
     # Compute all matched semvers
-    matchedSemvers = arrayNew()
+    matchedSemvers = []
     for rangePart in regexSplit(semverRegexRangeSplit, range):
         partSemvers = semverMatchPart(semvers, rangePart)
         if partSemvers != null:
@@ -266,14 +266,14 @@ function semverMatchPart(semvers, range):
 
         # Specific-version?
         elif rangeOp == '=' || (rangeOp == '' && rangeValueHasPatch != null):
-            filtered = dataFilter(filtered, 'semverCompare(semver, rangeValue) == 0', objectNew('rangeValue', rangeValue))
+            filtered = dataFilter(filtered, 'semverCompare(semver, rangeValue) == 0', {'rangeValue': rangeValue})
 
         # X-range?
         elif rangeOp == '':
             if rangeValueHasMinor != null:
                 upper = semverNew(objectGet(rangeValue, 'major'), objectGet(rangeValue, 'minor') + 1, 0)
             else:
-                upper = semverNew(objectGet(rangeValue, 'major') + 1, 0, 0, arrayNew('0'))
+                upper = semverNew(objectGet(rangeValue, 'major') + 1, 0, 0, ['0'])
             endif
             filtered = semverMatchPartFilter(filtered, lower, upper)
 
@@ -282,7 +282,7 @@ function semverMatchPart(semvers, range):
             filtered = dataFilter( \
                 filtered, \
                 "objectGet(semver, 'release') == null && semverCompare(semver, rangeValue) " + rangeOp + ' 0', \
-                objectNew('rangeValue', rangeValue) \
+                {'rangeValue': rangeValue} \
             )
         endif
 
@@ -311,9 +311,11 @@ function semverMatchPartFilter(semvers, lower, upper, upperInclusive):
             filtered = dataFilter( \
                 semvers, \
                 "objectGet(semver, 'release') == null || (major == lowerMajor && minor == lowerMinor && patch == lowerPatch)", \
-                objectNew( \
-                    'lowerMajor', objectGet(lower, 'major'), 'lowerMinor', objectGet(lower, 'minor'), 'lowerPatch', objectGet(lower, 'patch') \
-                ) \
+                { \
+                    'lowerMajor': objectGet(lower, 'major'), \
+                    'lowerMinor': objectGet(lower, 'minor'), \
+                    'lowerPatch': objectGet(lower, 'patch') \
+                } \
             )
         endif
     endif
@@ -322,7 +324,7 @@ function semverMatchPartFilter(semvers, lower, upper, upperInclusive):
     return dataFilter( \
         filtered, \
         '(lower == null || semverCompare(semver, lower) >= 0) && semverCompare(semver, upper) ' + if(upperInclusive != null, '<=', '<') + ' 0', \
-        objectNew('lower', lower, 'upper', upper) \
+        {'lower': lower, 'upper': upper} \
     )
 endfunction
 

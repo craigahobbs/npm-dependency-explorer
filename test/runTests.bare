@@ -18,7 +18,7 @@ include 'testSemver.bare'
 coverageStop()
 
 # Test report
-return unittestReport(objectNew( \
-    'coverageExclude', arrayNew('runTests.bare'), \
-    'coverageMin', 51 \
-))
+return unittestReport({ \
+    'coverageExclude': ['runTests.bare'], \
+    'coverageMin': 51 \
+})

@@ -64,8 +64,8 @@ async function ndeMain():
     markdownPrint( \
         '', \
         '**Version:** ' + markdownEscape(packageVersion), \
-        '(' + argsLink(ndeArguments, 'versions', objectNew('versionSelect', true)) + ' | ', \
-        argsLink(ndeArguments, 'chart', objectNew('versionChart', true)) + ')' \
+        '(' + argsLink(ndeArguments, 'versions', {'versionSelect': true}) + ' | ', \
+        argsLink(ndeArguments, 'chart', {'versionChart': true}) + ')' \
     )
 
     # Load all dependencies and compute the dependency statistics
@@ -80,8 +80,8 @@ async function ndeMain():
     endif
 
     # Compute the dependency type links
-    linkPackage = if(!showDev, 'Package', argsLink(ndeArguments, 'Package', objectNew('dev', false)))
-    linkDevelopment = if(showDev, 'Development', argsLink(ndeArguments, 'Development', objectNew('dev', true)))
+    linkPackage = if(!showDev, 'Package', argsLink(ndeArguments, 'Package', {'dev': false}))
+    linkDevelopment = if(showDev, 'Development', argsLink(ndeArguments, 'Development', {'dev': true}))
 
     # Render the package dependency stats
     dependenciesDescriptor = if(showDev, '*Development* ', '')
@@ -100,7 +100,7 @@ async function ndeMain():
             '### Warnings', \
             '', \
             'There are ' + arrayLength(warnings) + ' warnings.' + stringFromCharCode(160), \
-            argsLink(ndeArguments, if(showWarnings, 'Hide', 'Show'), objectNew('warn', !showWarnings)) \
+            argsLink(ndeArguments, if(showWarnings, 'Hide', 'Show'), {'warn': !showWarnings}) \
         )
         if showWarnings:
             for warning in warnings:
@@ -112,16 +112,16 @@ async function ndeMain():
     # Render the dependency table
     if arrayLength(dependenciesFiltered):
         # Compute the sort links
-        linkSortName = if(!sortDependencies, 'Name', argsLink(ndeArguments, 'Name', objectNew('sort', false)))
-        linkSortDependencies = if(sortDependencies, 'Dependencies', argsLink(ndeArguments, 'Dependencies', objectNew('sort', true)))
+        linkSortName = if(!sortDependencies, 'Name', argsLink(ndeArguments, 'Name', {'sort': false}))
+        linkSortDependencies = if(sortDependencies, 'Dependencies', argsLink(ndeArguments, 'Dependencies', {'sort': true}))
 
         # Compute the direct filter links
-        linkDirectAll = if(!filterDirect, 'All', argsLink(ndeArguments, 'All', objectNew('direct', false)))
-        linkDirect = if(filterDirect, 'Direct', argsLink(ndeArguments, 'Direct', objectNew('direct', true)))
+        linkDirectAll = if(!filterDirect, 'All', argsLink(ndeArguments, 'All', {'direct': false}))
+        linkDirect = if(filterDirect, 'Direct', argsLink(ndeArguments, 'Direct', {'direct': true}))
 
         # Compute the latest filter links
-        linkLatestAll = if(!filterLatest, 'All', argsLink(ndeArguments, 'All', objectNew('latest', false)))
-        linkLatest = if(filterLatest, 'Latest', argsLink(ndeArguments, 'Latest', objectNew('latest', true)))
+        linkLatestAll = if(!filterLatest, 'All', argsLink(ndeArguments, 'All', {'latest': false}))
+        linkLatest = if(filterLatest, 'Latest', argsLink(ndeArguments, 'Latest', {'latest': true}))
 
         # Render the filter/sort links
         markdownPrint( \
@@ -135,59 +135,59 @@ async function ndeMain():
 
         # Add the dependency count field
         dataCalculatedField(dependenciesFiltered, 'Dependencies', 'npmPackageDependencyCount(cache, Package, Version, "dependencies")', \
-            objectNew('cache', cache))
+            {'cache': cache})
 
         # Sort the table data
-        sortFields = arrayNew(arrayNew('Package'), arrayNew('Version'), arrayNew('Dependent'), arrayNew('Dependent Version'))
+        sortFields = [['Package'], ['Version'], ['Dependent'], ['Dependent Version']]
         if sortDependencies:
-            sortFields = arrayExtend(arrayNew(arrayNew('Dependencies', 1)), sortFields)
+            sortFields = arrayExtend([['Dependencies', 1]], sortFields)
         endif
         dataSort(dependenciesFiltered, sortFields)
 
         # Make the name field links
         dataCalculatedField(dependenciesFiltered, 'Package', \
-            "argsLink(ndeArguments, [Package], objectNew('name', [Package], 'version', [Version]), true, argsTopHeaderId)")
+            "argsLink(ndeArguments, [Package], {'name': [Package], 'version': [Version]}, true, argsTopHeaderId)")
         dataCalculatedField(dependenciesFiltered, 'Dependent', \
-            "argsLink(ndeArguments, [Dependent], objectNew('name', [Dependent], 'version', [Dependent Version]), true, argsTopHeaderId)")
+            "argsLink(ndeArguments, [Dependent], {'name': [Dependent], 'version': [Dependent Version]}, true, argsTopHeaderId)")
 
         # Render the dependencies table
-        dataTable(dependenciesFiltered, objectNew( \
-            'categories', arrayNew('Package', 'Version'), \
-            'fields', if(hasLatest, \
-                arrayNew('Latest', 'Range', 'Dependent', 'Dependent Version', 'Dependencies'), \
-                arrayNew('Range', 'Dependent', 'Dependent Version', 'Dependencies') \
+        dataTable(dependenciesFiltered, { \
+            'categories': ['Package', 'Version'], \
+            'fields': if(hasLatest, \
+                ['Latest', 'Range', 'Dependent', 'Dependent Version', 'Dependencies'], \
+                ['Range', 'Dependent', 'Dependent Version', 'Dependencies'] \
             ), \
-            'formats', objectNew( \
-                'Package', objectNew('markdown', true), \
-                'Dependent', objectNew('markdown', true) \
-            ) \
-        ))
+            'formats': { \
+                'Package': {'markdown': true}, \
+                'Dependent': {'markdown': true} \
+            } \
+        })
     endif
 endfunction
 
 
 # The npm Dependency Explorer arguments
-ndeArguments = argsValidate(arrayNew( \
-    objectNew('name', 'dev', 'type', 'bool', 'default', false), \
-    objectNew('name', 'direct', 'type', 'bool', 'default', false), \
-    objectNew('name', 'latest', 'type', 'bool', 'default', false), \
-    objectNew('name', 'name'), \
-    objectNew('name', 'sort', 'type', 'bool', 'default', false), \
-    objectNew('name', 'version'), \
-    objectNew('name', 'versionChart', 'type', 'bool', 'default', false, 'explicit', true), \
-    objectNew('name', 'versionSelect', 'type', 'bool', 'default', false, 'explicit', true), \
-    objectNew('name', 'warn', 'type', 'bool', 'default', false) \
-))
+ndeArguments = argsValidate([ \
+    {'name': 'dev', 'type': 'bool', 'default': false}, \
+    {'name': 'direct', 'type': 'bool', 'default': false}, \
+    {'name': 'latest', 'type': 'bool', 'default': false}, \
+    {'name': 'name'}, \
+    {'name': 'sort', 'type': 'bool', 'default': false}, \
+    {'name': 'version'}, \
+    {'name': 'versionChart', 'type': 'bool', 'default': false, 'explicit': true}, \
+    {'name': 'versionSelect', 'type': 'bool', 'default': false, 'explicit': true}, \
+    {'name': 'warn', 'type': 'bool', 'default': false} \
+])
 
 
 # Render the package selection form
 function ndeRenderForm(cache, packageName, packageVersion):
     # Render the search form
-    elementModelRender(arrayNew( \
-        objectNew('html', 'p', 'elem', objectNew('html', 'b', 'elem', objectNew('text', 'Package Name:'))), \
-        objectNew('html', 'p', 'elem', formsTextElements('package-name-text', packageName, 30, ndePackageNameOnClick)), \
-        objectNew('html', 'p', 'elem', formsLinkButtonElements('Explore Dependencies', ndePackageNameOnClick)) \
-    ))
+    elementModelRender([ \
+        {'html': 'p', 'elem': {'html': 'b', 'elem': {'text': 'Package Name:'}}}, \
+        {'html': 'p', 'elem': formsTextElements('package-name-text', packageName, 30, ndePackageNameOnClick)}, \
+        {'html': 'p', 'elem': formsLinkButtonElements('Explore Dependencies', ndePackageNameOnClick)} \
+    ])
     documentSetFocus('package-name-text')
 
     # Render error messages
@@ -203,11 +203,11 @@ function ndeRenderForm(cache, packageName, packageVersion):
 
     # Render example packages
     markdownPrint('', '## Examples')
-    for exampleName in arraySort(arrayNew( \
+    for exampleName in arraySort([ \
         'c8', 'eslint', 'jsdoc', 'jsdom', 'npm', \
         'bare-script', 'element-model', 'markdown-model', 'markdown-up', 'schema-markdown' \
-    )):
-        markdownPrint('', argsLink(ndeArguments, exampleName, objectNew('name', exampleName), true))
+    ]):
+        markdownPrint('', argsLink(ndeArguments, exampleName, {'name': exampleName}, true))
     endfor
 endfunction
 
@@ -215,7 +215,7 @@ endfunction
 # Package name button on-click handler
 function ndePackageNameOnClick():
     packageName = stringTrim(documentInputValue('package-name-text'))
-    windowSetLocation(argsURL(ndeArguments, objectNew('name', packageName), true))
+    windowSetLocation(argsURL(ndeArguments, {'name': packageName}, true))
 endfunction
 
 
@@ -231,7 +231,7 @@ function ndeRenderVersionLinks(cache, packageName, packageVersion):
     packageVersionLatest = npmPackageVersionLatest(npmCacheGetPackage(cache, packageName))
     for packageSemver in packageSemvers:
         packageVersion = semverStringify(packageSemver)
-        markdownPrint('', argsLink(ndeArguments, packageVersion, objectNew('version', packageVersion), false, argsTopHeaderId) + \
+        markdownPrint('', argsLink(ndeArguments, packageVersion, {'version': packageVersion}, false, argsTopHeaderId) + \
             if(packageVersion == packageVersionLatest, ' (latest)', ''))
     endfor
 endfunction
@@ -250,33 +250,33 @@ async function ndeRenderVersionChart(args, cache, packageName, packageVersion, d
     npmCacheLoadPackageAll(cache, packageName, dependencyKey)
 
     # Compute the version dependency data table
-    versionDependencies = arrayNew()
+    versionDependencies = []
     packageSemvers = npmCacheGetPackageVersions(cache, packageName)
     packageSemverCount = arrayLength(packageSemvers)
     for packageSemver, ixSemver in packageSemvers:
         packageVersion = semverStringify(packageSemver)
-        arrayPush(versionDependencies, objectNew( \
-            'Version Index', packageSemverCount - ixSemver - 1, \
-            'Version', argsLink(ndeArguments, packageVersion, objectNew('version', packageVersion), false, argsTopHeaderId), \
-            'Dependencies', npmPackageDependencyCount(cache, packageName, packageVersion, dependencyKey) \
-        ))
+        arrayPush(versionDependencies, { \
+            'Version Index': packageSemverCount - ixSemver - 1, \
+            'Version': argsLink(ndeArguments, packageVersion, {'version': packageVersion}, false, argsTopHeaderId), \
+            'Dependencies': npmPackageDependencyCount(cache, packageName, packageVersion, dependencyKey) \
+        })
     endfor
 
     # Render the version dependency data as a line chart and as a table
-    dataLineChart(versionDependencies, objectNew( \
-        'width', 800, \
-        'height', 300, \
-        'x', 'Version Index', \
-        'y', arrayNew('Dependencies'), \
-        'xTicks', objectNew('count', 5), \
-        'yTicks', objectNew('count', 5, 'start', 0), \
-        'precision', 1 \
-    ))
-    dataSort(versionDependencies, arrayNew(arrayNew('Version Index', 1)))
-    dataTable(versionDependencies, objectNew( \
-        'fields', arrayNew('Version Index', 'Version', 'Dependencies'), \
-        'formats', objectNew( \
-            'Version', objectNew('markdown', true) \
-        ) \
-    ))
+    dataLineChart(versionDependencies, { \
+        'width': 800, \
+        'height': 300, \
+        'x': 'Version Index', \
+        'y': ['Dependencies'], \
+        'xTicks': {'count': 5}, \
+        'yTicks': {'count': 5, 'start': 0}, \
+        'precision': 1 \
+    })
+    dataSort(versionDependencies, [['Version Index', 1]])
+    dataTable(versionDependencies, { \
+        'fields': ['Version Index', 'Version', 'Dependencies'], \
+        'formats': { \
+            'Version': {'markdown': true} \
+        } \
+    })
 endfunction
