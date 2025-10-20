@@ -27,7 +27,7 @@ clean:
 
 
 test: $(DEFAULT_VENV_BUILD)
-	$(DEFAULT_VENV_BIN)/bare -d -m -v vUnittestReport true test/runTests.bare$(if $(TEST), -v vTest "'$(TEST)'")
+	$(DEFAULT_VENV_BIN)/bare -d -m -v vUnittestReport true test/runTests.bare$(if $(TEST), -v vUnittestTest "'$(TEST)'")
 
 
 lint: $(DEFAULT_VENV_BUILD)
