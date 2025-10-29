@@ -31,4 +31,4 @@ test: $(DEFAULT_VENV_BUILD)
 
 
 lint: $(DEFAULT_VENV_BUILD)
-	$(DEFAULT_VENV_BIN)/bare -s *.bare test/*.bare
+	$(DEFAULT_VENV_BIN)/bare -x -m *.bare test/*.bare
