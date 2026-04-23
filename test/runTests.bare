@@ -5,7 +5,7 @@ include <unittest.bare>
 
 
 # Start coverage
-coverageStart()
+unittestCoverageStart()
 
 # Coverage includes (in lieu of tests)
 include '../npm-dependency-explorer.bare'
@@ -15,7 +15,7 @@ include '../npm.bare'
 include 'testSemver.bare'
 
 # Stop coverage
-coverageStop()
+unittestCoverageStop()
 
 # Test report
 return unittestReport({ \

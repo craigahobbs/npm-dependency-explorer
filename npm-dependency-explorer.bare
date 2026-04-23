@@ -2,6 +2,10 @@
 # https://github.com/craigahobbs/npm-dependency-explorer/blob/main/LICENSE
 
 include <args.bare>
+include <data.bare>
+include <dataUtil.bare>
+include <dataLineChart.bare>
+include <dataTable.bare>
 include <forms.bare>
 
 include 'npm.bare'
