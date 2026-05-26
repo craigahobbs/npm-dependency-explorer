@@ -8,7 +8,7 @@ include <unittest.bare>
 unittestCoverageStart()
 
 # Coverage includes (in lieu of tests)
-include '../npm-dependency-explorer.bare'
+include '../npmDependencyExplorer.bare'
 include '../npm.bare'
 
 # Test includes
