@@ -51,7 +51,7 @@ async function ndeMain():
         '', \
         '## [' + markdownEscape(packageName) + '](' + npmPackagePageURL(packageName) + ')', \
         '', \
-        '**Description:** ' + markdownEscape(objectGet(packageJSON, 'description')) \
+        '**Description:** ' + markdownEscape(objectGet(packageJSON, 'description', '')) \
     )
 
     # Render the package version selection links?
@@ -145,7 +145,7 @@ async function ndeMain():
         # Sort the table data
         sortFields = [['Package'], ['Version'], ['Dependent'], ['Dependent Version']]
         if sortDependencies:
-            sortFields = arrayExtend([['Dependencies', 1]], sortFields)
+            sortFields = arrayExtend([['Dependencies', true]], sortFields)
         endif
         dataSort(dependenciesFiltered, sortFields)
 
@@ -156,7 +156,7 @@ async function ndeMain():
             "argsLink(ndeArguments, [Dependent], {'name': [Dependent], 'version': [Dependent Version]}, true, argsTopHeaderId)")
 
         # Render the dependencies table
-        dataTable(dependenciesFiltered, { \
+        markdownPrint(dataTableMarkdown(dependenciesFiltered, { \
             'categories': ['Package', 'Version'], \
             'fields': if(hasLatest, \
                 ['Latest', 'Range', 'Dependent', 'Dependent Version', 'Dependencies'], \
@@ -166,7 +166,7 @@ async function ndeMain():
                 'Package': {'markdown': true}, \
                 'Dependent': {'markdown': true} \
             } \
-        })
+        }))
     endif
 endfunction
 
@@ -277,11 +277,11 @@ async function ndeRenderVersionChart(args, cache, packageName, packageVersion, d
         'yTicks': {'count': 5, 'start': 0}, \
         'precision': 1 \
     })
-    dataSort(versionDependencies, [['Version Index', 1]])
-    dataTable(versionDependencies, { \
+    dataSort(versionDependencies, [['Version Index', true]])
+    markdownPrint(dataTableMarkdown(versionDependencies, { \
         'fields': ['Version Index', 'Version', 'Dependencies'], \
         'formats': { \
             'Version': {'markdown': true} \
         } \
-    })
+    }))
 endfunction

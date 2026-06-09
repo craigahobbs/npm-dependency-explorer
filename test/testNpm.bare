@@ -1,0 +1,577 @@
+# Licensed under the MIT License
+# https://github.com/craigahobbs/npm-dependency-explorer/blob/main/LICENSE
+
+include <unittest.bare>
+include <unittestMock.bare>
+
+include '../npm.bare'
+
+
+# Mock npm registry data (map of package data URL to package data JSON text) for the npm tests
+testNpmRegistryData = { \
+    'https://registry.npmjs.org/root': jsonStringify({ \
+        'dist-tags': {'latest': '2.0.0'}, \
+        'versions': { \
+            '1.0.0': {'version': '1.0.0', 'description': 'Root package', 'dependencies': {'a': '^1.0.0'}}, \
+            '2.0.0': { \
+                'version': '2.0.0', \
+                'description': 'Root package', \
+                'dependencies': {'a': '^1.0.0', 'b': '~1.0.0', 'missing': '^1.0.0'}, \
+                'devDependencies': {'d': '^1.0.0'} \
+            } \
+        } \
+    }), \
+    'https://registry.npmjs.org/a': jsonStringify({ \
+        'dist-tags': {'latest': '1.2.0'}, \
+        'versions': { \
+            '1.0.0': {'version': '1.0.0'}, \
+            '1.2.0': {'version': '1.2.0', 'dependencies': {'b': '^2.0.0'}} \
+        } \
+    }), \
+    'https://registry.npmjs.org/b': jsonStringify({ \
+        'dist-tags': {'latest': '2.0.0'}, \
+        'versions': { \
+            '1.0.0': {'version': '1.0.0'}, \
+            '1.0.5': {'version': '1.0.5'}, \
+            '2.0.0': {'version': '2.0.0'} \
+        } \
+    }), \
+    'https://registry.npmjs.org/d': jsonStringify({ \
+        'dist-tags': {'latest': '1.0.0'}, \
+        'versions': {'1.0.0': {'version': '1.0.0'}} \
+    }) \
+}
+
+
+# The debug message logged when the "missing" package's range cannot be resolved
+testNpmMissingDebug = 'npm: Un-matched SemVer range "^1.0.0" for package "missing", using "null" (latest)'
+
+
+#
+# URL functions
+#
+
+
+function testNpmPackagePageURL():
+    unittestEqual(npmPackagePageURL('markdown-up'), 'https://www.npmjs.com/package/markdown-up')
+    unittestEqual(npmPackagePageURL('@scope/pkg'), 'https://www.npmjs.com/package/%40scope%2Fpkg')
+endfunction
+unittestRunTest('testNpmPackagePageURL')
+
+
+function testNpmPackageURL():
+    unittestEqual(npmPackageURL('markdown-up'), 'https://registry.npmjs.org/markdown-up')
+    unittestEqual(npmPackageURL('@scope/pkg'), 'https://registry.npmjs.org/%40scope%2Fpkg')
+endfunction
+unittestRunTest('testNpmPackageURL')
+
+
+#
+# Package data accessors
+#
+
+
+function testNpmPackageJSON():
+    packageData = jsonParse(objectGet(testNpmRegistryData, 'https://registry.npmjs.org/b'))
+    unittestEqual(objectGet(npmPackageJSON(packageData, '1.0.5'), 'version'), '1.0.5')
+    unittestEqual(npmPackageJSON(packageData, '9.9.9'), null)
+endfunction
+unittestRunTest('testNpmPackageJSON')
+
+
+function testNpmPackageVersionLatest():
+    packageData = jsonParse(objectGet(testNpmRegistryData, 'https://registry.npmjs.org/b'))
+    unittestEqual(npmPackageVersionLatest(packageData), '2.0.0')
+endfunction
+unittestRunTest('testNpmPackageVersionLatest')
+
+
+#
+# Cache basics
+#
+
+
+function testNpmCacheNew():
+    unittestDeepEqual(npmCacheNew(), {'packages': {}, 'versions': {}, 'ranges': {}})
+endfunction
+unittestRunTest('testNpmCacheNew')
+
+
+function testNpmCacheAddPackage():
+    cache = npmCacheNew()
+
+    # Add a package with versions
+    packageData = jsonParse(objectGet(testNpmRegistryData, 'https://registry.npmjs.org/b'))
+    npmCacheAddPackage(cache, 'b', packageData)
+    unittestEqual(npmCacheGetPackage(cache, 'b'), packageData)
+    unittestEqual(arrayLength(npmCacheGetPackageVersions(cache, 'b')), 3)
+    unittestDeepEqual(objectGet(objectGet(cache, 'ranges'), 'b'), {})
+
+    # Add a null package (no versions)
+    npmCacheAddPackage(cache, 'missing', null)
+    unittestEqual(npmCacheGetPackage(cache, 'missing'), null)
+    unittestDeepEqual(npmCacheGetPackageVersions(cache, 'missing'), [])
+endfunction
+unittestRunTest('testNpmCacheAddPackage')
+
+
+#
+# npmCacheGetPackageVersion
+#
+
+
+function testNpmCacheGetPackageVersion_match():
+    cache = npmCacheNew()
+    npmCacheAddPackage(cache, 'b', jsonParse(objectGet(testNpmRegistryData, 'https://registry.npmjs.org/b')))
+
+    # Resolve a range to a version (computed and cached)
+    unittestEqual(npmCacheGetPackageVersion(cache, 'b', '~1.0.0'), '1.0.5')
+
+    # The range is now cached - returned directly
+    unittestEqual(npmCacheGetPackageVersion(cache, 'b', '~1.0.0'), '1.0.5')
+    unittestEqual(objectGet(objectGet(objectGet(cache, 'ranges'), 'b'), '~1.0.0'), '1.0.5')
+endfunction
+unittestRunTest('testNpmCacheGetPackageVersion_match')
+
+
+function testNpmCacheGetPackageVersion_unmatchedUsesLatest():
+    cache = npmCacheNew()
+    npmCacheAddPackage(cache, 'b', jsonParse(objectGet(testNpmRegistryData, 'https://registry.npmjs.org/b')))
+
+    # An un-matched range falls back to the latest version (with a debug log)
+    unittestMockAll()
+    version = npmCacheGetPackageVersion(cache, 'b', '^9.0.0')
+    debugCalls = unittestMockEnd()
+
+    unittestEqual(version, '2.0.0')
+    unittestDeepEqual( \
+        debugCalls, \
+        [['systemLogDebug', ['npm: Un-matched SemVer range "^9.0.0" for package "b", using "2.0.0" (latest)']]] \
+    )
+endfunction
+unittestRunTest('testNpmCacheGetPackageVersion_unmatchedUsesLatest')
+
+
+function testNpmCacheGetPackageVersion_unmatchedNoPackage():
+    cache = npmCacheNew()
+    npmCacheAddPackage(cache, 'missing', null)
+
+    # An un-matched range with no package data resolves to null (with a debug log)
+    unittestMockAll()
+    version = npmCacheGetPackageVersion(cache, 'missing', '^1.0.0')
+    debugCalls = unittestMockEnd()
+
+    unittestEqual(version, null)
+    unittestDeepEqual(debugCalls, [['systemLogDebug', [testNpmMissingDebug]]])
+endfunction
+unittestRunTest('testNpmCacheGetPackageVersion_unmatchedNoPackage')
+
+
+#
+# npmCacheLoadPackage
+#
+
+
+async function testNpmCacheLoadPackage():
+    unittestMockAll({'systemFetch': testNpmRegistryData})
+    cache = npmCacheNew()
+
+    # Load a specific version - returns the version and loads dependencies
+    packageVersion = npmCacheLoadPackage(cache, 'root', '2.0.0', 'dependencies')
+    unittestEqual(packageVersion, '2.0.0')
+
+    unittestMockEnd()
+
+    # The root package and its direct dependency packages were loaded
+    unittestEqual(npmPackageVersionLatest(npmCacheGetPackage(cache, 'root')), '2.0.0')
+    unittestEqual(npmPackageVersionLatest(npmCacheGetPackage(cache, 'a')), '1.2.0')
+    unittestEqual(npmPackageVersionLatest(npmCacheGetPackage(cache, 'b')), '2.0.0')
+endfunction
+unittestRunTest('testNpmCacheLoadPackage')
+
+
+async function testNpmCacheLoadPackage_cachedAndDefaultVersion():
+    unittestMockAll({'systemFetch': testNpmRegistryData})
+    cache = npmCacheNew()
+
+    # Pre-load the root package
+    npmCacheLoadPackage(cache, 'root', '2.0.0', 'dependencies')
+
+    # Load again with no version - defaults to latest, package already cached (no fetch)
+    packageVersion = npmCacheLoadPackage(cache, 'root', null, 'dependencies')
+    unittestEqual(packageVersion, '2.0.0')
+
+    unittestMockEnd()
+endfunction
+unittestRunTest('testNpmCacheLoadPackage_cachedAndDefaultVersion')
+
+
+async function testNpmCacheLoadPackage_unknownPackage():
+    unittestMockAll({'systemFetch': {}})
+    cache = npmCacheNew()
+
+    # Loading an unknown package fetches null - no dependencies loaded
+    packageVersion = npmCacheLoadPackage(cache, 'nope', '1.0.0', 'dependencies')
+    unittestEqual(packageVersion, '1.0.0')
+    unittestEqual(npmCacheGetPackage(cache, 'nope'), null)
+
+    unittestMockEnd()
+endfunction
+unittestRunTest('testNpmCacheLoadPackage_unknownPackage')
+
+
+async function testNpmCacheLoadPackage_unknownVersion():
+    unittestMockAll({'systemFetch': testNpmRegistryData})
+    cache = npmCacheNew()
+
+    # Loading a known package but unknown version - no package JSON, no dependencies loaded
+    packageVersion = npmCacheLoadPackage(cache, 'b', '9.9.9', 'dependencies')
+    unittestEqual(packageVersion, '9.9.9')
+
+    unittestMockEnd()
+endfunction
+unittestRunTest('testNpmCacheLoadPackage_unknownVersion')
+
+
+#
+# npmCacheLoadPackageAll
+#
+
+
+async function testNpmCacheLoadPackageAll():
+    unittestMockAll({'systemFetch': testNpmRegistryData})
+    cache = npmCacheNew()
+
+    # Load all versions of the package and their dependencies
+    npmCacheLoadPackageAll(cache, 'root', 'dependencies')
+
+    unittestMockEnd()
+
+    # The root package and dependency packages are loaded
+    unittestEqual(npmPackageVersionLatest(npmCacheGetPackage(cache, 'root')), '2.0.0')
+    unittestEqual(npmPackageVersionLatest(npmCacheGetPackage(cache, 'a')), '1.2.0')
+    unittestEqual(npmPackageVersionLatest(npmCacheGetPackage(cache, 'b')), '2.0.0')
+endfunction
+unittestRunTest('testNpmCacheLoadPackageAll')
+
+
+async function testNpmCacheLoadPackageAll_cached():
+    unittestMockAll({'systemFetch': testNpmRegistryData})
+    cache = npmCacheNew()
+
+    # Pre-load the package, then load all again (already cached, no fetch)
+    npmCacheLoadPackageAll(cache, 'b', 'dependencies')
+    npmCacheLoadPackageAll(cache, 'b', 'dependencies')
+
+    unittestMockEnd()
+
+    unittestEqual(npmPackageVersionLatest(npmCacheGetPackage(cache, 'b')), '2.0.0')
+endfunction
+unittestRunTest('testNpmCacheLoadPackageAll_cached')
+
+
+async function testNpmCacheLoadPackageAll_unknownPackage():
+    unittestMockAll({'systemFetch': {}})
+    cache = npmCacheNew()
+
+    # Loading all versions of an unknown package - fetches null, nothing loaded
+    npmCacheLoadPackageAll(cache, 'nope', 'dependencies')
+    unittestEqual(npmCacheGetPackage(cache, 'nope'), null)
+
+    unittestMockEnd()
+endfunction
+unittestRunTest('testNpmCacheLoadPackageAll_unknownPackage')
+
+
+#
+# npmCacheGetPackageDependencies / stats
+#
+
+
+async function testNpmCacheGetPackageDependencies():
+    unittestMockAll({'systemFetch': testNpmRegistryData})
+    cache = npmCacheNew()
+    npmCacheLoadPackage(cache, 'root', '2.0.0', 'dependencies')
+
+    dependencies = []
+    warnings = []
+    completed = {}
+    npmCacheGetPackageDependencies(cache, dependencies, warnings, completed, 'root', '2.0.0', 'dependencies')
+    debugCalls = unittestMockEnd()
+
+    # 'missing' has no resolvable version - a warning, no row
+    unittestDeepEqual(warnings, ['Unknown version "^1.0.0" of package "missing"'])
+
+    # The dependency rows (a@1.2.0, b@1.0.5 from root; b@2.0.0 from a)
+    unittestDeepEqual( \
+        dependencies, \
+        [ \
+            {'Package': 'a', 'Version': '1.2.0', 'Latest': '', 'Range': '^1.0.0', 'Dependent': 'root', 'Dependent Version': '2.0.0'}, \
+            {'Package': 'b', 'Version': '2.0.0', 'Latest': '', 'Range': '^2.0.0', 'Dependent': 'a', 'Dependent Version': '1.2.0'}, \
+            {'Package': 'b', 'Version': '1.0.5', 'Latest': '2.0.0', 'Range': '~1.0.0', 'Dependent': 'root', 'Dependent Version': '2.0.0'} \
+        ] \
+    )
+
+    # The unresolvable 'missing' range was logged as a debug message
+    unittestDeepEqual(debugCalls, [ \
+        ['systemFetch', ['https://registry.npmjs.org/root']], \
+        ['systemFetch', [ \
+            [ \
+                'https://registry.npmjs.org/a', \
+                'https://registry.npmjs.org/b', \
+                'https://registry.npmjs.org/missing' \
+            ] \
+        ]], \
+        ['systemLogDebug', [testNpmMissingDebug]] \
+    ])
+endfunction
+unittestRunTest('testNpmCacheGetPackageDependencies')
+
+
+async function testNpmCacheGetPackageDependencies_completed():
+    unittestMockAll({'systemFetch': testNpmRegistryData})
+    cache = npmCacheNew()
+    npmCacheLoadPackage(cache, 'root', '2.0.0', 'dependencies')
+    unittestMockEnd()
+
+    # "a"@1.2.0 has one dependency (b@2.0.0)
+    dependencies = []
+    warnings = []
+    completed = {}
+    npmCacheGetPackageDependencies(cache, dependencies, warnings, completed, 'a', '1.2.0', 'dependencies')
+    unittestEqual(arrayLength(dependencies), 1)
+
+    # A second walk of the same package/version is skipped (already in "completed") - no duplicate rows
+    npmCacheGetPackageDependencies(cache, dependencies, warnings, completed, 'a', '1.2.0', 'dependencies')
+    unittestEqual(arrayLength(dependencies), 1)
+endfunction
+unittestRunTest('testNpmCacheGetPackageDependencies_completed')
+
+
+async function testNpmCacheGetPackageDependencies_noDependencies():
+    unittestMockAll({'systemFetch': testNpmRegistryData})
+    cache = npmCacheNew()
+    npmCacheLoadPackage(cache, 'b', '1.0.5', 'dependencies')
+    unittestMockEnd()
+
+    # A package version with no dependencies adds no rows
+    dependencies = []
+    warnings = []
+    completed = {}
+    npmCacheGetPackageDependencies(cache, dependencies, warnings, completed, 'b', '1.0.5', 'dependencies')
+    unittestDeepEqual(dependencies, [])
+    unittestDeepEqual(warnings, [])
+endfunction
+unittestRunTest('testNpmCacheGetPackageDependencies_noDependencies')
+
+
+function testNpmCacheGetPackageDependencies_unloadedPackage():
+    # A package that was never loaded has no package data, so its package JSON is null
+    cache = npmCacheNew()
+    dependencies = []
+    warnings = []
+    completed = {}
+    npmCacheGetPackageDependencies(cache, dependencies, warnings, completed, 'unloaded', '1.0.0', 'dependencies')
+    unittestDeepEqual(dependencies, [])
+    unittestDeepEqual(warnings, [])
+endfunction
+unittestRunTest('testNpmCacheGetPackageDependencies_unloadedPackage')
+
+
+async function testNpmPackageDependencyCount():
+    unittestMockAll({'systemFetch': testNpmRegistryData})
+    cache = npmCacheNew()
+    npmCacheLoadPackage(cache, 'root', '2.0.0', 'dependencies')
+
+    # root@2.0.0 totals: a@1.2.0, b@1.0.5, b@2.0.0 = 3
+    countRoot = npmPackageDependencyCount(cache, 'root', '2.0.0', 'dependencies')
+
+    # A leaf package has no dependencies
+    countLeaf = npmPackageDependencyCount(cache, 'b', '1.0.5', 'dependencies')
+    debugCalls = unittestMockEnd()
+
+    unittestEqual(countRoot, 3)
+    unittestEqual(countLeaf, 0)
+
+    # The unresolvable 'missing' range was logged once (the range is cached thereafter)
+    unittestDeepEqual(debugCalls, [ \
+        ['systemFetch', ['https://registry.npmjs.org/root']], \
+        ['systemFetch', [ \
+            [ \
+                'https://registry.npmjs.org/a', \
+                'https://registry.npmjs.org/b', \
+                'https://registry.npmjs.org/missing' \
+            ] \
+        ]], \
+        ['systemLogDebug', [testNpmMissingDebug]] \
+    ])
+endfunction
+unittestRunTest('testNpmPackageDependencyCount')
+
+
+async function testNpmPackageStats():
+    unittestMockAll({'systemFetch': testNpmRegistryData})
+    cache = npmCacheNew()
+    npmCacheLoadPackage(cache, 'root', '2.0.0', 'dependencies')
+
+    stats = npmPackageStats(cache, 'root', '2.0.0', 'dependencies')
+    debugCalls = unittestMockEnd()
+
+    # Total: a@1.2.0, b@2.0.0, b@1.0.5 = 3; direct (root@2.0.0): a, b@1.0.5 = 2;
+    # warnings for the missing package and "b"'s multiple versions
+    unittestDeepEqual(stats, { \
+        'count': 3, \
+        'countDirect': 2, \
+        'dependencies': [ \
+            {'Package': 'a', 'Version': '1.2.0', 'Latest': '', 'Range': '^1.0.0', 'Dependent': 'root', 'Dependent Version': '2.0.0'}, \
+            {'Package': 'b', 'Version': '2.0.0', 'Latest': '', 'Range': '^2.0.0', 'Dependent': 'a', 'Dependent Version': '1.2.0'}, \
+            {'Package': 'b', 'Version': '1.0.5', 'Latest': '2.0.0', 'Range': '~1.0.0', 'Dependent': 'root', 'Dependent Version': '2.0.0'} \
+        ], \
+        'dependenciesDirect': [ \
+            {'Package': 'a', 'Version': '1.2.0', 'Latest': '', 'Range': '^1.0.0', 'Dependent': 'root', 'Dependent Version': '2.0.0'}, \
+            {'Package': 'b', 'Version': '1.0.5', 'Latest': '2.0.0', 'Range': '~1.0.0', 'Dependent': 'root', 'Dependent Version': '2.0.0'} \
+        ], \
+        'warnings': [ \
+            'Unknown version "^1.0.0" of package "missing"', \
+            'Multiple versions of package "b" ("1.0.5", "2.0.0")' \
+        ] \
+    })
+
+    # The unresolvable 'missing' range was logged as a debug message
+    unittestDeepEqual(debugCalls, [ \
+        ['systemFetch', ['https://registry.npmjs.org/root']], \
+        ['systemFetch', [ \
+            [ \
+                'https://registry.npmjs.org/a', \
+                'https://registry.npmjs.org/b', \
+                'https://registry.npmjs.org/missing' \
+            ] \
+        ]], \
+        ['systemLogDebug', [testNpmMissingDebug]] \
+    ])
+endfunction
+unittestRunTest('testNpmPackageStats')
+
+
+async function testNpmPackageStats_optional():
+    # root's only dependency is an *optional* dependency on "b"
+    data = { \
+        'https://registry.npmjs.org/root': jsonStringify({ \
+            'dist-tags': {'latest': '1.0.0'}, \
+            'versions': { \
+                '1.0.0': {'version': '1.0.0', 'optionalDependencies': {'b': '~1.0.0'}} \
+            } \
+        }), \
+        'https://registry.npmjs.org/b': jsonStringify({ \
+            'dist-tags': {'latest': '2.0.0'}, \
+            'versions': { \
+                '1.0.0': {'version': '1.0.0'}, \
+                '1.0.5': {'version': '1.0.5'}, \
+                '2.0.0': {'version': '2.0.0'} \
+            } \
+        }) \
+    }
+    unittestMockAll({'systemFetch': data})
+    cache = npmCacheNew()
+    npmCacheLoadPackage(cache, 'root', '1.0.0', 'dependencies')
+
+    # Optional dependencies are loaded alongside the regular dependencies - "b"'s package is fetched
+    unittestDeepEqual(unittestMockEnd(), [ \
+        ['systemFetch', ['https://registry.npmjs.org/root']], \
+        ['systemFetch', [['https://registry.npmjs.org/b']]] \
+    ])
+
+    # Optional dependencies are included in the stats - "b" is counted as a direct dependency of root,
+    # and the empty warnings list confirms it resolved cleanly (its package was loaded)
+    stats = npmPackageStats(cache, 'root', '1.0.0', 'dependencies')
+    unittestDeepEqual(stats, { \
+        'count': 1, \
+        'countDirect': 1, \
+        'dependencies': [ \
+            {'Package': 'b', 'Version': '1.0.5', 'Latest': '2.0.0', 'Range': '~1.0.0', 'Dependent': 'root', 'Dependent Version': '1.0.0'} \
+        ], \
+        'dependenciesDirect': [ \
+            {'Package': 'b', 'Version': '1.0.5', 'Latest': '2.0.0', 'Range': '~1.0.0', 'Dependent': 'root', 'Dependent Version': '1.0.0'} \
+        ], \
+        'warnings': [] \
+    })
+endfunction
+unittestRunTest('testNpmPackageStats_optional')
+
+
+async function testNpmPackageStats_optionalMerged():
+    # "root" has both regular and optional dependencies. They are merged into one set, with the optional
+    # range taking precedence on a name conflict: "a" is "^1.0.0" in dependencies but "^2.0.0" in
+    # optionalDependencies, so the "^2.0.0" range wins.
+    data = { \
+        'https://registry.npmjs.org/root': jsonStringify({ \
+            'dist-tags': {'latest': '1.0.0'}, \
+            'versions': { \
+                '1.0.0': {'version': '1.0.0', 'dependencies': {'a': '^1.0.0'}, 'optionalDependencies': {'a': '^2.0.0', 'b': '~1.0.0'}} \
+            } \
+        }), \
+        'https://registry.npmjs.org/a': jsonStringify({ \
+            'dist-tags': {'latest': '2.0.0'}, \
+            'versions': {'1.0.0': {'version': '1.0.0'}, '1.5.0': {'version': '1.5.0'}, '2.0.0': {'version': '2.0.0'}} \
+        }), \
+        'https://registry.npmjs.org/b': jsonStringify({ \
+            'dist-tags': {'latest': '1.0.5'}, \
+            'versions': {'1.0.0': {'version': '1.0.0'}, '1.0.5': {'version': '1.0.5'}} \
+        }) \
+    }
+    unittestMockAll({'systemFetch': data})
+    cache = npmCacheNew()
+
+    # The merge during loading fetches both the regular ("a") and optional ("b") dependency packages
+    npmCacheLoadPackage(cache, 'root', '1.0.0', 'dependencies')
+    unittestDeepEqual(unittestMockEnd(), [ \
+        ['systemFetch', ['https://registry.npmjs.org/root']], \
+        ['systemFetch', [ \
+            [ \
+                'https://registry.npmjs.org/a', \
+                'https://registry.npmjs.org/b' \
+            ] \
+        ]] \
+    ])
+
+    # Both are counted as direct dependencies of "root", and "a" resolves via the optional "^2.0.0"
+    # (2.0.0), not the regular "^1.0.0" (1.5.0) - optional takes precedence
+    stats = npmPackageStats(cache, 'root', '1.0.0', 'dependencies')
+    unittestDeepEqual(stats, { \
+        'count': 2, \
+        'countDirect': 2, \
+        'dependencies': [ \
+            {'Package': 'a', 'Version': '2.0.0', 'Latest': '', 'Range': '^2.0.0', 'Dependent': 'root', 'Dependent Version': '1.0.0'}, \
+            {'Package': 'b', 'Version': '1.0.5', 'Latest': '', 'Range': '~1.0.0', 'Dependent': 'root', 'Dependent Version': '1.0.0'} \
+        ], \
+        'dependenciesDirect': [ \
+            {'Package': 'a', 'Version': '2.0.0', 'Latest': '', 'Range': '^2.0.0', 'Dependent': 'root', 'Dependent Version': '1.0.0'}, \
+            {'Package': 'b', 'Version': '1.0.5', 'Latest': '', 'Range': '~1.0.0', 'Dependent': 'root', 'Dependent Version': '1.0.0'} \
+        ], \
+        'warnings': [] \
+    })
+endfunction
+unittestRunTest('testNpmPackageStats_optionalMerged')
+
+
+async function testNpmPackageStats_dev():
+    unittestMockAll({'systemFetch': testNpmRegistryData})
+    cache = npmCacheNew()
+    npmCacheLoadPackage(cache, 'root', '2.0.0', 'devDependencies')
+    unittestMockEnd()
+
+    # Development dependencies are walked on their own (no optional merge): just "d", a direct dependency
+    stats = npmPackageStats(cache, 'root', '2.0.0', 'devDependencies')
+    unittestDeepEqual(stats, { \
+        'count': 1, \
+        'countDirect': 1, \
+        'dependencies': [ \
+            {'Package': 'd', 'Version': '1.0.0', 'Latest': '', 'Range': '^1.0.0', 'Dependent': 'root', 'Dependent Version': '2.0.0'} \
+        ], \
+        'dependenciesDirect': [ \
+            {'Package': 'd', 'Version': '1.0.0', 'Latest': '', 'Range': '^1.0.0', 'Dependent': 'root', 'Dependent Version': '2.0.0'} \
+        ], \
+        'warnings': [] \
+    })
+endfunction
+unittestRunTest('testNpmPackageStats_dev')

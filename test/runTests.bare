@@ -13,6 +13,8 @@ include '../npm.bare'
 
 # Test includes
 include 'testSemver.bare'
+include 'testNpm.bare'
+include 'testNpmDependencyExplorer.bare'
 
 # Stop coverage
 unittestCoverageStop()
@@ -20,5 +22,5 @@ unittestCoverageStop()
 # Test report
 return unittestReport({ \
     'coverageExclude': ['runTests.bare'], \
-    'coverageMin': 51 \
+    'coverageMin': 100 \
 })

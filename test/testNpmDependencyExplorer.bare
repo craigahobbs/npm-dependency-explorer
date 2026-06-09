@@ -1,0 +1,779 @@
+# Licensed under the MIT License
+# https://github.com/craigahobbs/npm-dependency-explorer/blob/main/LICENSE
+
+include <unittest.bare>
+include <unittestMock.bare>
+
+include '../npmDependencyExplorer.bare'
+
+
+# Mock npm registry data (map of package data URL to package data JSON text) for the npm Dependency Explorer tests
+testNdeRegistryData = { \
+    'https://registry.npmjs.org/root': jsonStringify({ \
+        'dist-tags': {'latest': '2.0.0'}, \
+        'versions': { \
+            '1.0.0': {'version': '1.0.0', 'description': 'Root package', 'dependencies': {'a': '^1.0.0'}}, \
+            '2.0.0': { \
+                'version': '2.0.0', \
+                'description': 'Root package', \
+                'dependencies': {'a': '^1.0.0', 'b': '~1.0.0', 'missing': '^1.0.0'}, \
+                'devDependencies': {'d': '^1.0.0'} \
+            } \
+        } \
+    }), \
+    'https://registry.npmjs.org/a': jsonStringify({ \
+        'dist-tags': {'latest': '1.2.0'}, \
+        'versions': { \
+            '1.0.0': {'version': '1.0.0'}, \
+            '1.2.0': {'version': '1.2.0', 'dependencies': {'b': '^2.0.0'}} \
+        } \
+    }), \
+    'https://registry.npmjs.org/b': jsonStringify({ \
+        'dist-tags': {'latest': '2.0.0'}, \
+        'versions': { \
+            '1.0.0': {'version': '1.0.0'}, \
+            '1.0.5': {'version': '1.0.5'}, \
+            '2.0.0': {'version': '2.0.0'} \
+        } \
+    }), \
+    'https://registry.npmjs.org/d': jsonStringify({ \
+        'dist-tags': {'latest': '1.0.0'}, \
+        'versions': {'1.0.0': {'version': '1.0.0'}} \
+    }) \
+}
+
+
+# The debug message logged when the "missing" package's range cannot be resolved
+testNdeMissingDebug = 'npm: Un-matched SemVer range "^1.0.0" for package "missing", using "null" (latest)'
+
+
+#
+# ndeMain - package selection form
+#
+
+
+async function testNdeMain_form():
+    unittestMockAll({'systemFetch': testNdeRegistryData})
+
+    ndeMain()
+
+    calls = unittestMockEnd()
+
+    unittestDeepEqual(calls, [ \
+        ['markdownPrint', ['Home | [About](#url=README.md)']], \
+        ['markdownPrint', ['','# npm Dependency Explorer']], \
+        ['documentSetTitle', ['npm Dependency Explorer']], \
+        ['elementModelRender', [ \
+            [ \
+                { \
+                    'html': 'p', \
+                    'elem': { \
+                        'html': 'b', \
+                        'elem': {'text': 'Package Name:'} \
+                    } \
+                }, \
+                { \
+                    'html': 'p', \
+                    'elem': { \
+                        'html': 'input', \
+                        'attr': { \
+                            'autocomplete': 'off', \
+                            'id': 'package-name-text', \
+                            'style': 'font-size: inherit; border: thin solid black; padding: 0.4em;', \
+                            'type': 'text', \
+                            'value': null, \
+                            'size': 30 \
+                        }, \
+                        'callback': {'keyup': '<function>'} \
+                    } \
+                }, \
+                { \
+                    'html': 'p', \
+                    'elem': { \
+                        'html': 'a', \
+                        'attr': {'style': 'cursor: pointer; user-select: none;'}, \
+                        'elem': {'text': 'Explore Dependencies'}, \
+                        'callback': {'click': '<function>'} \
+                    } \
+                } \
+            ] \
+        ]], \
+        ['documentSetFocus', ['package-name-text']], \
+        ['markdownPrint', ['','## Examples']], \
+        ['markdownPrint', ['',"[bare\\-script](#var.vName='bare-script')"]], \
+        ['markdownPrint', ['',"[c8](#var.vName='c8')"]], \
+        ['markdownPrint', ['',"[element\\-model](#var.vName='element-model')"]], \
+        ['markdownPrint', ['',"[eslint](#var.vName='eslint')"]], \
+        ['markdownPrint', ['',"[jsdoc](#var.vName='jsdoc')"]], \
+        ['markdownPrint', ['',"[jsdom](#var.vName='jsdom')"]], \
+        ['markdownPrint', ['',"[markdown\\-model](#var.vName='markdown-model')"]], \
+        ['markdownPrint', ['',"[markdown\\-up](#var.vName='markdown-up')"]], \
+        ['markdownPrint', ['',"[npm](#var.vName='npm')"]], \
+        ['markdownPrint', ['',"[schema\\-markdown](#var.vName='schema-markdown')"]] \
+    ])
+endfunction
+unittestRunTest('testNdeMain_form')
+
+
+async function testNdeMain_unknownPackage():
+    systemGlobalSet('vName', 'nope')
+    unittestMockAll({'systemFetch': {}})
+
+    ndeMain()
+
+    calls = unittestMockEnd()
+    systemGlobalSet('vName', null)
+
+    unittestDeepEqual(calls, [ \
+        ['systemFetch', ['https://registry.npmjs.org/nope']], \
+        ['markdownPrint', ['[Home](#var=) | [About](#url=README.md)']], \
+        ['markdownPrint', ['','# npm Dependency Explorer']], \
+        ['documentSetTitle', ['npm Dependency Explorer']], \
+        ['elementModelRender', [ \
+            [ \
+                { \
+                    'html': 'p', \
+                    'elem': { \
+                        'html': 'b', \
+                        'elem': {'text': 'Package Name:'} \
+                    } \
+                }, \
+                { \
+                    'html': 'p', \
+                    'elem': { \
+                        'html': 'input', \
+                        'attr': { \
+                            'autocomplete': 'off', \
+                            'id': 'package-name-text', \
+                            'style': 'font-size: inherit; border: thin solid black; padding: 0.4em;', \
+                            'type': 'text', \
+                            'value': 'nope', \
+                            'size': 30 \
+                        }, \
+                        'callback': {'keyup': '<function>'} \
+                    } \
+                }, \
+                { \
+                    'html': 'p', \
+                    'elem': { \
+                        'html': 'a', \
+                        'attr': {'style': 'cursor: pointer; user-select: none;'}, \
+                        'elem': {'text': 'Explore Dependencies'}, \
+                        'callback': {'click': '<function>'} \
+                    } \
+                } \
+            ] \
+        ]], \
+        ['documentSetFocus', ['package-name-text']], \
+        ['markdownPrint', ['','**Error:** Unknown package "nope"']], \
+        ['markdownPrint', ['','## Examples']], \
+        ['markdownPrint', ['',"[bare\\-script](#var.vName='bare-script')"]], \
+        ['markdownPrint', ['',"[c8](#var.vName='c8')"]], \
+        ['markdownPrint', ['',"[element\\-model](#var.vName='element-model')"]], \
+        ['markdownPrint', ['',"[eslint](#var.vName='eslint')"]], \
+        ['markdownPrint', ['',"[jsdoc](#var.vName='jsdoc')"]], \
+        ['markdownPrint', ['',"[jsdom](#var.vName='jsdom')"]], \
+        ['markdownPrint', ['',"[markdown\\-model](#var.vName='markdown-model')"]], \
+        ['markdownPrint', ['',"[markdown\\-up](#var.vName='markdown-up')"]], \
+        ['markdownPrint', ['',"[npm](#var.vName='npm')"]], \
+        ['markdownPrint', ['',"[schema\\-markdown](#var.vName='schema-markdown')"]] \
+    ])
+endfunction
+unittestRunTest('testNdeMain_unknownPackage')
+
+
+async function testNdeMain_unknownVersion():
+    systemGlobalSet('vName', 'b')
+    systemGlobalSet('vVersion', '9.9.9')
+    unittestMockAll({'systemFetch': testNdeRegistryData})
+
+    ndeMain()
+
+    calls = unittestMockEnd()
+    systemGlobalSet('vName', null)
+    systemGlobalSet('vVersion', null)
+
+    unittestDeepEqual(calls, [ \
+        ['systemFetch', ['https://registry.npmjs.org/b']], \
+        ['markdownPrint', ['[Home](#var=) | [About](#url=README.md)']], \
+        ['markdownPrint', ['','# npm Dependency Explorer']], \
+        ['documentSetTitle', ['npm Dependency Explorer']], \
+        ['elementModelRender', [ \
+            [ \
+                { \
+                    'html': 'p', \
+                    'elem': { \
+                        'html': 'b', \
+                        'elem': {'text': 'Package Name:'} \
+                    } \
+                }, \
+                { \
+                    'html': 'p', \
+                    'elem': { \
+                        'html': 'input', \
+                        'attr': { \
+                            'autocomplete': 'off', \
+                            'id': 'package-name-text', \
+                            'style': 'font-size: inherit; border: thin solid black; padding: 0.4em;', \
+                            'type': 'text', \
+                            'value': 'b', \
+                            'size': 30 \
+                        }, \
+                        'callback': {'keyup': '<function>'} \
+                    } \
+                }, \
+                { \
+                    'html': 'p', \
+                    'elem': { \
+                        'html': 'a', \
+                        'attr': {'style': 'cursor: pointer; user-select: none;'}, \
+                        'elem': {'text': 'Explore Dependencies'}, \
+                        'callback': {'click': '<function>'} \
+                    } \
+                } \
+            ] \
+        ]], \
+        ['documentSetFocus', ['package-name-text']], \
+        ['markdownPrint', ['','**Error:** Unknown version "9.9.9" of package "b"']], \
+        ['markdownPrint', ['','## Examples']], \
+        ['markdownPrint', ['',"[bare\\-script](#var.vName='bare-script')"]], \
+        ['markdownPrint', ['',"[c8](#var.vName='c8')"]], \
+        ['markdownPrint', ['',"[element\\-model](#var.vName='element-model')"]], \
+        ['markdownPrint', ['',"[eslint](#var.vName='eslint')"]], \
+        ['markdownPrint', ['',"[jsdoc](#var.vName='jsdoc')"]], \
+        ['markdownPrint', ['',"[jsdom](#var.vName='jsdom')"]], \
+        ['markdownPrint', ['',"[markdown\\-model](#var.vName='markdown-model')"]], \
+        ['markdownPrint', ['',"[markdown\\-up](#var.vName='markdown-up')"]], \
+        ['markdownPrint', ['',"[npm](#var.vName='npm')"]], \
+        ['markdownPrint', ['',"[schema\\-markdown](#var.vName='schema-markdown')"]] \
+    ])
+endfunction
+unittestRunTest('testNdeMain_unknownVersion')
+
+
+#
+# ndeMain - package dependencies (full render)
+#
+
+
+async function testNdeMain_package():
+    systemGlobalSet('vName', 'root')
+    systemGlobalSet('vVersion', '2.0.0')
+    unittestMockAll({'systemFetch': testNdeRegistryData})
+
+    ndeMain()
+
+    calls = unittestMockEnd()
+    systemGlobalSet('vName', null)
+    systemGlobalSet('vVersion', null)
+
+    # The full package render with warnings hidden by default (a "Show" link, no warning list)
+    unittestDeepEqual(calls, [ \
+        ['systemFetch', ['https://registry.npmjs.org/root']], \
+        ['systemFetch', [ \
+            [ \
+                'https://registry.npmjs.org/a', \
+                'https://registry.npmjs.org/b', \
+                'https://registry.npmjs.org/missing' \
+            ] \
+        ]], \
+        ['markdownPrint', ['[Home](#var=) | [About](#url=README.md)']], \
+        ['markdownPrint', ['','# npm Dependency Explorer']], \
+        ['documentSetTitle', ['npm Dependency Explorer - root']], \
+        ['markdownPrint', [ \
+            '', \
+            '## [root](https://www.npmjs.com/package/root)', \
+            '', \
+            '**Description:** Root package' \
+        ]], \
+        ['markdownPrint', [ \
+            '', \
+            '**Version:** 2.0.0', \
+            "([versions](#var.vName='root'&var.vVersion='2.0.0'&var.vVersionSelect=true) | ", \
+            "[chart](#var.vName='root'&var.vVersion='2.0.0'&var.vVersionChart=true))" \
+        ]], \
+        ['systemLogDebug', [testNdeMissingDebug]], \
+        ['markdownPrint', [ \
+            '', \
+            '**Direct dependencies:** 2 \\', \
+            '**Total dependencies:** 3', \
+            '', \
+            "**Type:** Package | [Development](#var.vDev=true&var.vName='root'&var.vVersion='2.0.0')" \
+        ]], \
+        ['markdownPrint', [ \
+            '', \
+            '### Warnings', \
+            '', \
+            'There are 2 warnings.' + stringFromCharCode(160) + '', \
+            "[Show](#var.vName='root'&var.vVersion='2.0.0'&var.vWarn=true)" \
+        ]], \
+        ['markdownPrint', [ \
+            '', \
+            '### Dependencies', \
+            '', \
+            "**Sort:** Name | [Dependencies](#var.vName='root'&var.vSort=true&var.vVersion='2.0.0') \\", \
+            "**Direct:** All | [Direct](#var.vDirect=true&var.vName='root'&var.vVersion='2.0.0') \\", \
+            "**Latest:** All | [Latest](#var.vLatest=true&var.vName='root'&var.vVersion='2.0.0')" \
+        ]], \
+        ['markdownPrint', [ \
+            [ \
+                '| Package                                       | Version | Latest | Range  | Dependent                                           | Dependent Version | Dependencies |', \
+                '|-----------------------------------------------|---------|--------|--------|-----------------------------------------------------|-------------------|--------------|', \
+                "| [a](#var.vName='a'&var.vVersion='1.2.0'&_top) | 1.2.0   |        | ^1.0.0 | [root](#var.vName='root'&var.vVersion='2.0.0'&_top) | 2.0.0             | 1            |", \
+                "| [b](#var.vName='b'&var.vVersion='1.0.5'&_top) | 1.0.5   | 2.0.0  | ~1.0.0 | [root](#var.vName='root'&var.vVersion='2.0.0'&_top) | 2.0.0             | 0            |", \
+                "| [b](#var.vName='b'&var.vVersion='2.0.0'&_top) | 2.0.0   |        | ^2.0.0 | [a](#var.vName='a'&var.vVersion='1.2.0'&_top)       | 1.2.0             | 0            |" \
+            ] \
+        ]] \
+    ])
+endfunction
+unittestRunTest('testNdeMain_package')
+
+
+async function testNdeMain_packageWarningsShown():
+    systemGlobalSet('vName', 'root')
+    systemGlobalSet('vVersion', '2.0.0')
+    systemGlobalSet('vWarn', true)
+    unittestMockAll({'systemFetch': testNdeRegistryData})
+
+    ndeMain()
+
+    calls = unittestMockEnd()
+    systemGlobalSet('vName', null)
+    systemGlobalSet('vVersion', null)
+    systemGlobalSet('vWarn', null)
+
+    # With warnings shown, the warning details are listed and the link toggles to "Hide"
+    unittestDeepEqual(calls, [ \
+        ['systemFetch', ['https://registry.npmjs.org/root']], \
+        ['systemFetch', [ \
+            [ \
+                'https://registry.npmjs.org/a', \
+                'https://registry.npmjs.org/b', \
+                'https://registry.npmjs.org/missing' \
+            ] \
+        ]], \
+        ['markdownPrint', ['[Home](#var=) | [About](#url=README.md)']], \
+        ['markdownPrint', ['','# npm Dependency Explorer']], \
+        ['documentSetTitle', ['npm Dependency Explorer - root']], \
+        ['markdownPrint', [ \
+            '', \
+            '## [root](https://www.npmjs.com/package/root)', \
+            '', \
+            '**Description:** Root package' \
+        ]], \
+        ['markdownPrint', [ \
+            '', \
+            '**Version:** 2.0.0', \
+            "([versions](#var.vName='root'&var.vVersion='2.0.0'&var.vVersionSelect=true&var.vWarn=true) | ", \
+            "[chart](#var.vName='root'&var.vVersion='2.0.0'&var.vVersionChart=true&var.vWarn=true))" \
+        ]], \
+        ['systemLogDebug', [testNdeMissingDebug]], \
+        ['markdownPrint', [ \
+            '', \
+            '**Direct dependencies:** 2 \\', \
+            '**Total dependencies:** 3', \
+            '', \
+            "**Type:** Package | [Development](#var.vDev=true&var.vName='root'&var.vVersion='2.0.0'&var.vWarn=true)" \
+        ]], \
+        ['markdownPrint', [ \
+            '', \
+            '### Warnings', \
+            '', \
+            'There are 2 warnings.' + stringFromCharCode(160) + '', \
+            "[Hide](#var.vName='root'&var.vVersion='2.0.0')" \
+        ]], \
+        ['markdownPrint', ['','- Unknown version \\"^1.0.0\\" of package \\"missing\\"']], \
+        ['markdownPrint', ['','- Multiple versions of package \\"b\\" \\(\\"1.0.5\\", \\"2.0.0\\"\\)']], \
+        ['markdownPrint', [ \
+            '', \
+            '### Dependencies', \
+            '', \
+            "**Sort:** Name | [Dependencies](#var.vName='root'&var.vSort=true&var.vVersion='2.0.0'&var.vWarn=true) \\", \
+            "**Direct:** All | [Direct](#var.vDirect=true&var.vName='root'&var.vVersion='2.0.0'&var.vWarn=true) \\", \
+            "**Latest:** All | [Latest](#var.vLatest=true&var.vName='root'&var.vVersion='2.0.0'&var.vWarn=true)" \
+        ]], \
+        ['markdownPrint', [ \
+            [ \
+                '| Package                                       | Version | Latest | Range  | Dependent                                           | Dependent Version | Dependencies |', \
+                '|-----------------------------------------------|---------|--------|--------|-----------------------------------------------------|-------------------|--------------|', \
+                "| [a](#var.vName='a'&var.vVersion='1.2.0'&_top) | 1.2.0   |        | ^1.0.0 | [root](#var.vName='root'&var.vVersion='2.0.0'&_top) | 2.0.0             | 1            |", \
+                "| [b](#var.vName='b'&var.vVersion='1.0.5'&_top) | 1.0.5   | 2.0.0  | ~1.0.0 | [root](#var.vName='root'&var.vVersion='2.0.0'&_top) | 2.0.0             | 0            |", \
+                "| [b](#var.vName='b'&var.vVersion='2.0.0'&_top) | 2.0.0   |        | ^2.0.0 | [a](#var.vName='a'&var.vVersion='1.2.0'&_top)       | 1.2.0             | 0            |" \
+            ] \
+        ]] \
+    ])
+endfunction
+unittestRunTest('testNdeMain_packageWarningsShown')
+
+
+async function testNdeMain_packageFiltersAndSort():
+    systemGlobalSet('vName', 'root')
+    systemGlobalSet('vVersion', '2.0.0')
+    systemGlobalSet('vSort', true)
+    systemGlobalSet('vDirect', true)
+    systemGlobalSet('vLatest', true)
+    unittestMockAll({'systemFetch': testNdeRegistryData})
+
+    ndeMain()
+
+    calls = unittestMockEnd()
+    systemGlobalSet('vName', null)
+    systemGlobalSet('vVersion', null)
+    systemGlobalSet('vSort', null)
+    systemGlobalSet('vDirect', null)
+    systemGlobalSet('vLatest', null)
+
+    # With sort/direct/latest active, the active option is plain text and the alternative is a link
+    unittestDeepEqual(calls, [ \
+        ['systemFetch', ['https://registry.npmjs.org/root']], \
+        ['systemFetch', [ \
+            [ \
+                'https://registry.npmjs.org/a', \
+                'https://registry.npmjs.org/b', \
+                'https://registry.npmjs.org/missing' \
+            ] \
+        ]], \
+        ['markdownPrint', ['[Home](#var=) | [About](#url=README.md)']], \
+        ['markdownPrint', ['','# npm Dependency Explorer']], \
+        ['documentSetTitle', ['npm Dependency Explorer - root']], \
+        ['markdownPrint', [ \
+            '', \
+            '## [root](https://www.npmjs.com/package/root)', \
+            '', \
+            '**Description:** Root package' \
+        ]], \
+        ['markdownPrint', [ \
+            '', \
+            '**Version:** 2.0.0', \
+            "([versions](#var.vDirect=true&var.vLatest=true&var.vName='root'&var.vSort=true&var.vVersion='2.0.0'&var.vVersionSelect=true) | ", \
+            "[chart](#var.vDirect=true&var.vLatest=true&var.vName='root'&var.vSort=true&var.vVersion='2.0.0'&var.vVersionChart=true))" \
+        ]], \
+        ['systemLogDebug', [testNdeMissingDebug]], \
+        ['markdownPrint', [ \
+            '', \
+            '**Direct dependencies:** 2 \\', \
+            '**Total dependencies:** 3', \
+            '', \
+            "**Type:** Package | [Development](#var.vDev=true&var.vDirect=true&var.vLatest=true&var.vName='root'&var.vSort=true&var.vVersion='2.0.0')" \
+        ]], \
+        ['markdownPrint', [ \
+            '', \
+            '### Warnings', \
+            '', \
+            'There are 2 warnings.' + stringFromCharCode(160) + '', \
+            "[Show](#var.vDirect=true&var.vLatest=true&var.vName='root'&var.vSort=true&var.vVersion='2.0.0'&var.vWarn=true)" \
+        ]], \
+        ['markdownPrint', [ \
+            '', \
+            '### Dependencies', \
+            '', \
+            "**Sort:** [Name](#var.vDirect=true&var.vLatest=true&var.vName='root'&var.vVersion='2.0.0') | Dependencies \\", \
+            "**Direct:** [All](#var.vLatest=true&var.vName='root'&var.vSort=true&var.vVersion='2.0.0') | Direct \\", \
+            "**Latest:** [All](#var.vDirect=true&var.vName='root'&var.vSort=true&var.vVersion='2.0.0') | Latest" \
+        ]], \
+        ['markdownPrint', [ \
+            [ \
+                '| Package                                       | Version | Latest | Range  | Dependent                                           | Dependent Version | Dependencies |', \
+                '|-----------------------------------------------|---------|--------|--------|-----------------------------------------------------|-------------------|--------------|', \
+                "| [b](#var.vName='b'&var.vVersion='1.0.5'&_top) | 1.0.5   | 2.0.0  | ~1.0.0 | [root](#var.vName='root'&var.vVersion='2.0.0'&_top) | 2.0.0             | 0            |" \
+            ] \
+        ]] \
+    ])
+endfunction
+unittestRunTest('testNdeMain_packageFiltersAndSort')
+
+
+async function testNdeMain_packageDev():
+    systemGlobalSet('vName', 'root')
+    systemGlobalSet('vVersion', '2.0.0')
+    systemGlobalSet('vDev', true)
+    unittestMockAll({'systemFetch': testNdeRegistryData})
+
+    ndeMain()
+
+    calls = unittestMockEnd()
+    systemGlobalSet('vName', null)
+    systemGlobalSet('vVersion', null)
+    systemGlobalSet('vDev', null)
+
+    # Development dependencies: the "*Development*" descriptor and the "Development Dependencies" header (1 dep: d)
+    unittestDeepEqual(calls, [ \
+        ['systemFetch', ['https://registry.npmjs.org/root']], \
+        ['systemFetch', [ \
+            [ \
+                'https://registry.npmjs.org/d' \
+            ] \
+        ]], \
+        ['markdownPrint', ['[Home](#var=) | [About](#url=README.md)']], \
+        ['markdownPrint', ['','# npm Dependency Explorer']], \
+        ['documentSetTitle', ['npm Dependency Explorer - root']], \
+        ['markdownPrint', [ \
+            '', \
+            '## [root](https://www.npmjs.com/package/root)', \
+            '', \
+            '**Description:** Root package' \
+        ]], \
+        ['markdownPrint', [ \
+            '', \
+            '**Version:** 2.0.0', \
+            "([versions](#var.vDev=true&var.vName='root'&var.vVersion='2.0.0'&var.vVersionSelect=true) | ", \
+            "[chart](#var.vDev=true&var.vName='root'&var.vVersion='2.0.0'&var.vVersionChart=true))" \
+        ]], \
+        ['markdownPrint', [ \
+            '', \
+            '**Direct *Development* dependencies:** 1 \\', \
+            '**Total *Development* dependencies:** 1', \
+            '', \
+            "**Type:** [Package](#var.vName='root'&var.vVersion='2.0.0') | Development" \
+        ]], \
+        ['markdownPrint', [ \
+            '', \
+            '### Development Dependencies', \
+            '', \
+            "**Sort:** Name | [Dependencies](#var.vDev=true&var.vName='root'&var.vSort=true&var.vVersion='2.0.0') \\", \
+            "**Direct:** All | [Direct](#var.vDev=true&var.vDirect=true&var.vName='root'&var.vVersion='2.0.0')", \
+            '' \
+        ]], \
+        ['markdownPrint', [ \
+            [ \
+                '| Package                                       | Version | Range  | Dependent                                           | Dependent Version | Dependencies |', \
+                '|-----------------------------------------------|---------|--------|-----------------------------------------------------|-------------------|--------------|', \
+                "| [d](#var.vName='d'&var.vVersion='1.0.0'&_top) | 1.0.0   | ^1.0.0 | [root](#var.vName='root'&var.vVersion='2.0.0'&_top) | 2.0.0             | 0            |" \
+            ] \
+        ]] \
+    ])
+endfunction
+unittestRunTest('testNdeMain_packageDev')
+
+
+async function testNdeMain_packageNoLatestNoWarnings():
+    systemGlobalSet('vName', 'a')
+    systemGlobalSet('vVersion', '1.2.0')
+    unittestMockAll({'systemFetch': testNdeRegistryData})
+
+    ndeMain()
+
+    calls = unittestMockEnd()
+    systemGlobalSet('vName', null)
+    systemGlobalSet('vVersion', null)
+
+    # "a" has one dependency (b@2.0.0, already latest) and no warnings: no Warnings section, no "Latest" filter
+    unittestDeepEqual(calls, [ \
+        ['systemFetch', ['https://registry.npmjs.org/a']], \
+        ['systemFetch', [ \
+            [ \
+                'https://registry.npmjs.org/b' \
+            ] \
+        ]], \
+        ['markdownPrint', ['[Home](#var=) | [About](#url=README.md)']], \
+        ['markdownPrint', ['','# npm Dependency Explorer']], \
+        ['documentSetTitle', ['npm Dependency Explorer - a']], \
+        ['markdownPrint', [ \
+            '', \
+            '## [a](https://www.npmjs.com/package/a)', \
+            '', \
+            '**Description:** ' \
+        ]], \
+        ['markdownPrint', [ \
+            '', \
+            '**Version:** 1.2.0', \
+            "([versions](#var.vName='a'&var.vVersion='1.2.0'&var.vVersionSelect=true) | ", \
+            "[chart](#var.vName='a'&var.vVersion='1.2.0'&var.vVersionChart=true))" \
+        ]], \
+        ['markdownPrint', [ \
+            '', \
+            '**Direct dependencies:** 1 \\', \
+            '**Total dependencies:** 1', \
+            '', \
+            "**Type:** Package | [Development](#var.vDev=true&var.vName='a'&var.vVersion='1.2.0')" \
+        ]], \
+        ['markdownPrint', [ \
+            '', \
+            '### Dependencies', \
+            '', \
+            "**Sort:** Name | [Dependencies](#var.vName='a'&var.vSort=true&var.vVersion='1.2.0') \\", \
+            "**Direct:** All | [Direct](#var.vDirect=true&var.vName='a'&var.vVersion='1.2.0')", \
+            '' \
+        ]], \
+        ['markdownPrint', [ \
+            [ \
+                '| Package                                       | Version | Range  | Dependent                                     | Dependent Version | Dependencies |', \
+                '|-----------------------------------------------|---------|--------|-----------------------------------------------|-------------------|--------------|', \
+                "| [b](#var.vName='b'&var.vVersion='2.0.0'&_top) | 2.0.0   | ^2.0.0 | [a](#var.vName='a'&var.vVersion='1.2.0'&_top) | 1.2.0             | 0            |" \
+            ] \
+        ]] \
+    ])
+endfunction
+unittestRunTest('testNdeMain_packageNoLatestNoWarnings')
+
+
+async function testNdeMain_packageNoDependencies():
+    systemGlobalSet('vName', 'b')
+    systemGlobalSet('vVersion', '1.0.5')
+    unittestMockAll({'systemFetch': testNdeRegistryData})
+
+    ndeMain()
+
+    calls = unittestMockEnd()
+    systemGlobalSet('vName', null)
+    systemGlobalSet('vVersion', null)
+
+    # "b"@1.0.5 has no dependencies: stats show 0 and there is no dependency table or Warnings section
+    unittestDeepEqual(calls, [ \
+        ['systemFetch', ['https://registry.npmjs.org/b']], \
+        ['markdownPrint', ['[Home](#var=) | [About](#url=README.md)']], \
+        ['markdownPrint', ['','# npm Dependency Explorer']], \
+        ['documentSetTitle', ['npm Dependency Explorer - b']], \
+        ['markdownPrint', [ \
+            '', \
+            '## [b](https://www.npmjs.com/package/b)', \
+            '', \
+            '**Description:** ' \
+        ]], \
+        ['markdownPrint', [ \
+            '', \
+            '**Version:** 1.0.5', \
+            "([versions](#var.vName='b'&var.vVersion='1.0.5'&var.vVersionSelect=true) | ", \
+            "[chart](#var.vName='b'&var.vVersion='1.0.5'&var.vVersionChart=true))" \
+        ]], \
+        ['markdownPrint', [ \
+            '', \
+            '**Direct dependencies:** 0 \\', \
+            '**Total dependencies:** 0', \
+            '', \
+            "**Type:** Package | [Development](#var.vDev=true&var.vName='b'&var.vVersion='1.0.5')" \
+        ]] \
+    ])
+endfunction
+unittestRunTest('testNdeMain_packageNoDependencies')
+
+
+#
+# ndeMain - version select and version chart
+#
+
+
+async function testNdeMain_versionSelect():
+    systemGlobalSet('vName', 'b')
+    systemGlobalSet('vVersion', '2.0.0')
+    systemGlobalSet('vVersionSelect', true)
+    unittestMockAll({'systemFetch': testNdeRegistryData})
+
+    ndeMain()
+
+    calls = unittestMockEnd()
+    systemGlobalSet('vName', null)
+    systemGlobalSet('vVersion', null)
+    systemGlobalSet('vVersionSelect', null)
+
+    # The version links page (newest first; the latest version is tagged)
+    unittestDeepEqual(calls, [ \
+        ['systemFetch', ['https://registry.npmjs.org/b']], \
+        ['markdownPrint', ['[Home](#var=) | [About](#url=README.md)']], \
+        ['markdownPrint', ['','# npm Dependency Explorer']], \
+        ['documentSetTitle', ['npm Dependency Explorer - b']], \
+        ['markdownPrint', [ \
+            '', \
+            '## [b](https://www.npmjs.com/package/b)', \
+            '', \
+            '**Description:** ' \
+        ]], \
+        ['markdownPrint', [ \
+            '', \
+            "[Back to package](#var.vName='b'&var.vVersion='2.0.0')", \
+            '', \
+            '### Versions' \
+        ]], \
+        ['markdownPrint', ['',"[2.0.0](#var.vName='b'&var.vVersion='2.0.0'&_top) (latest)"]], \
+        ['markdownPrint', ['',"[1.0.5](#var.vName='b'&var.vVersion='1.0.5'&_top)"]], \
+        ['markdownPrint', ['',"[1.0.0](#var.vName='b'&var.vVersion='1.0.0'&_top)"]] \
+    ])
+endfunction
+unittestRunTest('testNdeMain_versionSelect')
+
+
+async function testNdeMain_versionChart():
+    systemGlobalSet('vName', 'b')
+    systemGlobalSet('vVersion', '2.0.0')
+    systemGlobalSet('vVersionChart', true)
+    unittestMockAll({'systemFetch': testNdeRegistryData})
+
+    ndeMain()
+
+    calls = unittestMockEnd()
+    systemGlobalSet('vName', null)
+    systemGlobalSet('vVersion', null)
+    systemGlobalSet('vVersionChart', null)
+
+    # The version dependency chart page renders a chart and a table (two element-model renders)
+    unittestDeepEqual(calls, [ \
+        ['systemFetch', ['https://registry.npmjs.org/b']], \
+        ['markdownPrint', ['[Home](#var=) | [About](#url=README.md)']], \
+        ['markdownPrint', ['','# npm Dependency Explorer']], \
+        ['documentSetTitle', ['npm Dependency Explorer - b']], \
+        ['markdownPrint', [ \
+            '', \
+            '## [b](https://www.npmjs.com/package/b)', \
+            '', \
+            '**Description:** ' \
+        ]], \
+        ['markdownPrint', [ \
+            '', \
+            "[Back to package](#var.vName='b'&var.vVersion='2.0.0')", \
+            '', \
+            '### Dependencies Chart' \
+        ]], \
+        ['elementModelRender', [ \
+            { \
+                'html': 'p', \
+                'elem': dataLineChartElements( \
+                    [ \
+                        {'Version Index': 2, 'Dependencies': 0}, \
+                        {'Version Index': 1, 'Dependencies': 0}, \
+                        {'Version Index': 0, 'Dependencies': 0} \
+                    ], \
+                    { \
+                        'width': 800, \
+                        'height': 300, \
+                        'x': 'Version Index', \
+                        'y': ['Dependencies'], \
+                        'xTicks': {'count': 5}, \
+                        'yTicks': {'count': 5, 'start': 0}, \
+                        'precision': 1 \
+                    } \
+                ) \
+            } \
+        ]], \
+        ['markdownPrint', [ \
+            [ \
+                '| Version Index | Version                                           | Dependencies |', \
+                '|---------------|---------------------------------------------------|--------------|', \
+                "| 2             | [2.0.0](#var.vName='b'&var.vVersion='2.0.0'&_top) | 0            |", \
+                "| 1             | [1.0.5](#var.vName='b'&var.vVersion='1.0.5'&_top) | 0            |", \
+                "| 0             | [1.0.0](#var.vName='b'&var.vVersion='1.0.0'&_top) | 0            |" \
+            ] \
+        ]] \
+    ])
+endfunction
+unittestRunTest('testNdeMain_versionChart')
+
+
+#
+# ndePackageNameOnClick
+#
+
+
+function testNdePackageNameOnClick():
+    unittestMockAll({'documentInputValue': {'package-name-text': '  lodash  '}})
+
+    ndePackageNameOnClick()
+
+    calls = unittestMockEnd()
+
+    # The trimmed package name is navigated to
+    unittestDeepEqual(calls, [ \
+        ['documentInputValue', ['package-name-text']], \
+        ['windowSetLocation', ["#var.vName='lodash'"]] \
+    ])
+endfunction
+unittestRunTest('testNdePackageNameOnClick')

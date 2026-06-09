@@ -2,6 +2,7 @@
 # https://github.com/craigahobbs/npm-dependency-explorer/blob/main/LICENSE
 
 include <unittest.bare>
+include <unittestMock.bare>
 
 include '../semver.bare'
 
@@ -58,6 +59,39 @@ function testSemverVersions():
     )
 endfunction
 unittestRunTest('testSemverVersions')
+
+
+function testSemverVersions_unrecognized():
+    # An unrecognized version is logged and excluded
+    unittestMockAll()
+    versions = semverVersions(['1.2.3', 'not-a-version'])
+    debugCalls = unittestMockEnd()
+
+    dataCalculatedField(versions, 'semver', 'semver != null')
+    unittestDeepEqual( \
+        versions, \
+        [ \
+            {'build': null, 'major': 1, 'minor': 2, 'patch': 3, 'release': null, 'semver': true} \
+        ] \
+    )
+
+    # The unrecognized version was logged as a debug message
+    unittestDeepEqual( \
+        debugCalls, \
+        [['systemLogDebug', ['semver: Unrecognized SemVer "not-a-version"']]] \
+    )
+endfunction
+unittestRunTest('testSemverVersions_unrecognized')
+
+
+function testSemverCompare_releaseNumericVsString():
+    # Release parts differ in numeric-ness at the same index (numeric < non-numeric)
+    semver = semverParse('1.0.0-alpha.1')
+    other = semverParse('1.0.0-alpha.beta')
+    unittestEqual(semverCompare(semver, other), -1)
+    unittestEqual(semverCompare(other, semver), 1)
+endfunction
+unittestRunTest('testSemverCompare_releaseNumericVsString')
 
 
 function testSemverMatch_parts():

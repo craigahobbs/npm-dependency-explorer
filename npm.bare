@@ -150,7 +150,7 @@ async function npmCacheLoadPackageJSONs(cache, packageJSONs, dependencyKey):
     unloadedRanges = []
     for packageJSON in packageJSONs:
         # Get the package dependencies
-        packageDependencies = objectGet(packageJSON, dependencyKey)
+        packageDependencies = npmPackageJSONDependencies(packageJSON, dependencyKey)
         if packageDependencies != null:
             # Add to the unloaded dependencies
             for dependencyName in objectKeys(packageDependencies):
@@ -178,10 +178,12 @@ async function npmCacheLoadPackageJSONs(cache, packageJSONs, dependencyKey):
     endfor
 
     # Fetch the unloaded depedency data URLs and add to the cache
-    for dependencyData, ixDependencyData in systemFetch(unloadedURLs):
-        dependencyData = if(dependencyData != null, jsonParse(dependencyData))
-        npmCacheAddPackage(cache, arrayGet(unloadedNames, ixDependencyData), dependencyData)
-    endfor
+    if unloadedURLs:
+        for dependencyData, ixDependencyData in systemFetch(unloadedURLs):
+            dependencyData = if(dependencyData != null, jsonParse(dependencyData))
+            npmCacheAddPackage(cache, arrayGet(unloadedNames, ixDependencyData), dependencyData)
+        endfor
+    endif
 
     # Get the array of fetched package JSONs
     unloadedJSONs = []
@@ -229,11 +231,11 @@ function npmCacheGetPackageDependencies(cache, dependencies, warnings, completed
     # Get the package dependencies object
     packageData = npmCacheGetPackage(cache, packageName)
     packageJSON = if(packageData != null, npmPackageJSON(packageData, packageVersion))
-    packageDependencies = if(packageJSON != null, objectGet(packageJSON, dependencyKey))
-    dependencyNames = if(packageDependencies != null, objectKeys(packageDependencies))
-    if dependencyNames == null:
+    packageDependencies = npmPackageJSONDependencies(packageJSON, dependencyKey)
+    if packageDependencies == null:
         return
     endif
+    dependencyNames = objectKeys(packageDependencies)
 
     # Add the package dependency rows
     for dependencyName in dependencyNames:
@@ -279,6 +281,23 @@ function npmPackageDependencyCount(cache, packageName, packageVersion, dependenc
 endfunction
 
 
+# Get a package JSON's dependencies for a key (merging optionalDependencies into 'dependencies')
+function npmPackageJSONDependencies(packageJSON, dependencyKey):
+    if packageJSON == null:
+        return null
+    endif
+    packageDependencies = objectGet(packageJSON, dependencyKey)
+    if dependencyKey == 'dependencies' && objectHas(packageJSON, 'optionalDependencies'):
+        if packageDependencies != null:
+            packageDependencies = objectAssign(objectCopy(packageDependencies), objectGet(packageJSON, 'optionalDependencies'))
+        else:
+            packageDependencies = objectGet(packageJSON, 'optionalDependencies')
+        endif
+    endif
+    return packageDependencies
+endfunction
+
+
 # Compute a package's total and direct dependencies with warnings
 function npmPackageStats(cache, packageName, packageVersion, dependencyKey):
     # Get the package dependencies
@@ -286,9 +305,6 @@ function npmPackageStats(cache, packageName, packageVersion, dependencyKey):
     warnings = []
     completed = {}
     npmCacheGetPackageDependencies(cache, dependencies, warnings, completed, packageName, packageVersion, dependencyKey)
-    if dependencyKey != 'devDependencies':
-        npmCacheGetPackageDependencies(cache, dependencies, warnings, completed, packageName, packageVersion, 'optionalDependencies')
-    endif
 
     # Compute the dependency statistics
     dependenciesDirect = dataFilter(dependencies, 'Dependent == packageName && [Dependent Version] == packageVersion', \
@@ -305,7 +321,7 @@ function npmPackageStats(cache, packageName, packageVersion, dependencyKey):
         dataAggregate(dependenciesTotal, { \
             'categories': ['Package'], \
             'measures': [ \
-                {'field': 'Count', 'function': 'count'} \
+                {'field': 'Version', 'function': 'count', 'name': 'Count'} \
             ] \
         }), \
         'Count > 1' \
