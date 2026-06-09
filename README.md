@@ -9,6 +9,8 @@ features to sort, filter, and visualize package dependencies.
 
 - [npm Dependency Explorer]
 
+- [npm Dependency Explorer tests]
+
 - [Source Code][source]
 
 
@@ -64,6 +66,7 @@ simplify and streamline your project.
 
 
 [npm Dependency Explorer]: https://craigahobbs.github.io/npm-dependency-explorer/
+[npm Dependency Explorer tests]: https://craigahobbs.github.io/npm-dependency-explorer/test/
 [source]: https://github.com/craigahobbs/npm-dependency-explorer
 [issues]: https://github.com/craigahobbs/npm-dependency-explorer/issues
 [npm]: https://www.npmjs.com/
