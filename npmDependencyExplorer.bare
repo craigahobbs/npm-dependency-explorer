@@ -3,10 +3,10 @@
 
 include <args.bare>
 include <data.bare>
-include <dataUtil.bare>
 include <dataLineChart.bare>
 include <dataTable.bare>
 include <forms.bare>
+include <markdown.bare>
 
 include 'npm.bare'
 

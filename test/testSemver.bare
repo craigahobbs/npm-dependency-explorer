@@ -1,6 +1,7 @@
 # Licensed under the MIT License
 # https://github.com/craigahobbs/npm-dependency-explorer/blob/main/LICENSE
 
+include <data.bare>
 include <unittest.bare>
 include <unittestMock.bare>
 
