@@ -1,6 +1,6 @@
-# CLAUDE.md
+# AGENTS.md
 
-This file provides guidance to Claude Code (claude.ai/code) when working with code in this repository.
+Notes for coding agents working in this repository.
 
 ## Overview
 
@@ -13,17 +13,16 @@ data is fetched client-side from `https://registry.npmjs.org/` via `systemFetch`
 When writing or modifying `.bare` files, invoke the `bare-script` skill — it covers BareScript syntax,
 the built-in library, the MarkdownUp/`markdown-script` model, and unit-test conventions.
 
-## Commands
+## python-build
 
-- `make test` — run the unit tests (coverage-enforced; see `test/runTests.bare`)
-- `make test TEST=<name>` — run a single test by name (e.g. `make test TEST=testSemverParse`)
-- `make lint` — static-check all `.bare` source and tests
-- `make commit` — runs `test` and `lint` (use before committing)
-- `make clean` / `make superclean` — remove `build/` and downloaded tooling
+This is a [python-build](https://github.com/craigahobbs/python-build#readme) `Makefile.tool` repo (not a Python package). Read the python-build skill before running tests, lint, or changing the Makefile: [`../python-build/SKILL.md`](../python-build/SKILL.md) if that file exists, otherwise [https://raw.githubusercontent.com/craigahobbs/python-build/main/SKILL.md](https://raw.githubusercontent.com/craigahobbs/python-build/main/SKILL.md).
 
-The build system is bootstrapped: the `Makefile` downloads `Makefile.tool` from the `python-build`
-project, which creates a Python venv under `build/env/` and installs the `bare-script` package
-(providing the `bare` CLI). `Makefile.tool` and `build/` are gitignored and regenerated.
+Local Makefile:
+
+- `TESTS_REQUIRE` — `bare-script` (provides the `bare` CLI)
+- `test` — `bare -d -m test/runTests.bare` (`TEST=` is an exact BareScript test name, e.g. `make test TEST=testSemverParse`)
+- `lint` — `bare -x` / `bare -s` on the `.bare` sources and tests
+- `commit` — `test` + `lint` (no `cover` / `doc` / `publish`)
 
 To run the app locally, serve the repo root over HTTP and open `index.html` (it loads MarkdownUp and
 its dependencies from `craigahobbs.github.io`). Open `test/index.html` to run the test suite in-browser.
