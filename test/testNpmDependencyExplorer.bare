@@ -737,10 +737,7 @@ async function testNdeMain_versionChart():
                         'width': 800, \
                         'height': 300, \
                         'x': 'Version Index', \
-                        'y': ['Dependencies'], \
-                        'xTicks': {'count': 5}, \
-                        'yTicks': {'count': 5, 'start': 0}, \
-                        'precision': 1 \
+                        'y': ['Dependencies'] \
                     } \
                 ) \
             } \
